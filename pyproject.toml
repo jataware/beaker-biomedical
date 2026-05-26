@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beaker-biomedical"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Satchel Baldwin", email = "satchel@jataware.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dependencies = [
+  "beaker-kernel==2.0.0b1",
+  "archytas==2.0.0b1",
+  "requests",
+  "PyYAML",
+  "idc-index",
+  "seaborn",
+  "biopython",
+  "cdapython"
+]
+
+[project.urls]
+Documentation = "https://github.com/jataware/beaker-biomedical#readme"
+Issues = "https://github.com/jataware/beaker-biomedical/issues"
+Source = "https://github.com/jataware/beaker-biomedical"
+
+[tool.hatch.version]
+path = "src/beaker_biomedical/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/beaker_biomedical tests}"
+
+[tool.coverage.run]
+source_pkgs = ["beaker_biomedical", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/beaker_biomedical/__about__.py",
+]
+
+[tool.coverage.paths]
+beaker_biomedical = ["src/beaker_biomedical", "*/beaker-biomedical/src/beaker_biomedical"]
+tests = ["tests", "*/beaker-biomedical/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+
+[tool.hatch.build.hooks.beaker]
+require-runtime-dependencies = true
+

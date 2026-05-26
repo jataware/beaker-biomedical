@@ -1,0 +1,11 @@
+credentials:
+  - name: GDC_TOKEN
+    check: env_var
+    required: false
+    description: >-
+      GDC authentication token (X-Auth-Token). Open-access search, retrieval, analysis,
+      gene-expression, and metadata endpoints work without it. Only required for downloading
+      controlled-access files (e.g. TCGA BAMs gated by dbGaP `phs*` ACLs), BAM slicing on
+      controlled-access files, and any submission API calls.
+    usage: "HTTP header `X-Auth-Token: <token>`"
+    service: "https://portal.gdc.cancer.gov/"

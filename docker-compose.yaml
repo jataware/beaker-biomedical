@@ -1,0 +1,34 @@
+version: '3'
+
+networks:
+  beaker:
+
+services:
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - ARCHYTAS_REF=upgrade              # archytas branch/tag
+        - BEAKER_KERNEL_REF=upgrade         # beaker-kernel branch/tag
+    ports:
+      - "8888:8888"
+    environment:
+      - DEBUG=1
+      - LOGLEVEL=INFO
+      - JUPYTER_SERVER=http://jupyter:8888
+      - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
+      - PYTHONPATH=/jupyter
+      - ENABLE_CHECKPOINTS=true
+      - TOOL_ENABLED_ASK_USER=true
+      - TOOL_ENABLED_RUN_CODE=true
+      - BIOME_LIT_REVIEW_DIR=/jupyter/_literature_review
+      - INTEGRATION_PATH=/jupyter/adhoc_data
+      - IDC_SKILL_REF=main              # idc-claude-skill branch/tag (e.g. main or v1.4.0)
+    env_file:
+      - .env
+    volumes:
+      - ./src/beaker_biomedical:/src/beaker_biomedical
+      - ./skills:/jupyter/.beaker/skills
+    networks:
+      - beaker
