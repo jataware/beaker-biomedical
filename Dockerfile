@@ -28,5 +28,6 @@ ENV BEAKER_AGENT_USER=jupyter \
 
 USER jupyter
 RUN mkdir -p /jupyter/.beaker/skills
+RUN python /jupyter/fetch-remote-skills.py /jupyter/.beaker/skills
 
 CMD ["python", "-m", "beaker_kernel.app.notebook_app", "--ip", "0.0.0.0", "--allow-root"]
