@@ -26,16 +26,3 @@ class BeakerBiomedicalContext(BeakerContext):
     async def setup(self, context_info=None, parent_header=None):
         # Custom setup can be done here
         pass
-
-    @action(default_payload='{\n  "question": "Will I find love?"\n}')
-    async def ask_eight_ball(self, message):
-        """
-        An example of an action. This just calls the existing tool defined on the agent.
-        """
-        content = message.content
-        question = content.get("question")
-        self.beaker_kernel.log("ask_eight_ball", f"Asking question: {question}")
-        result = await self.agent.magic_eight_ball(content.get("question"))
-        self.beaker_kernel.log("ask_eight_ball", f"Got answer: {result}")
-        return str(result)
-
