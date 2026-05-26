@@ -217,6 +217,11 @@ See [references/FILTERS.md](references/FILTERS.md) for the full operator table a
   `/files/versions/{file_ids}` or `/history/{file_id}`.
 - **BAM slices have no .bai.** Run `samtools index` after downloading.
 - **`size=0` + `facets=…`** is the right pattern for "give me counts, no records."
+- **Facet names are field names — invalid ones return 200, not 400.** An unknown facet like
+  `diagnoses.tumor_stage` (a common TCGA-era hallucination; the canonical field is
+  `diagnoses.ajcc_pathologic_stage`) comes back with no `aggregations` key and a
+  `warnings.facets: "unrecognized values: [...]"`. Inspect `warnings` on every facet call. Consult
+  [references/FACETS.md](references/FACETS.md) or `<endpoint>/_mapping` before guessing a facet name.
 - **`return_type=manifest` ignores `size`.** It dumps every match.
 - **Quicksearch base64-encodes ids.** `/v0/all` returns an extra base64 `id` field alongside the real
   `case_id`/`file_id`/`project_id`. Use the real id for follow-up calls.
@@ -247,6 +252,7 @@ For complete worked examples see [examples/](examples/):
 - [download_set_via_manifest.md](examples/download_set_via_manifest.md) — Search → manifest → DTT.
 - [query_case_with_diagnoses.md](examples/query_case_with_diagnoses.md) — Pull a case with nested clinical data.
 - [discover_fields_mapping.md](examples/discover_fields_mapping.md) — Use `/_mapping` to find valid fields.
+- [facet_aggregation.md](examples/facet_aggregation.md) — Count cases by `primary_site` with `facets=` + `size=0`.
 - [get_gene_expression_matrix.md](examples/get_gene_expression_matrix.md) — FPKM-UQ matrix.
 - [top_mutated_genes.md](examples/top_mutated_genes.md) — Cohort-level mutation analysis.
 - [bam_slice_by_gene.md](examples/bam_slice_by_gene.md) — Pull BRCA1 reads from a BAM.
@@ -262,6 +268,9 @@ For complete worked examples see [examples/](examples/):
 - [references/FIELDS.md](references/FIELDS.md) — How to use `/_mapping`, `defaults`, `expand`, and
   `nested`; common field groupings (`cases.demographic.*`, `cases.diagnoses.*`, `analysis.*`). Load
   before composing a fields/filter list.
+- [references/FACETS.md](references/FACETS.md) — Curated facet field names per endpoint, the
+  `warnings.facets` failure mode, and a verification recipe. Load when constructing a `facets=`
+  query, or after a facet call comes back with no aggregations.
 - [references/DOWNLOADING.md](references/DOWNLOADING.md) — Single + batch download, manifests,
   controlled-access, related_files, BAM slicing details.
 - [references/GENE-EXPRESSION.md](references/GENE-EXPRESSION.md) — `/gene_expression/{availability,values,gene_selection}`:

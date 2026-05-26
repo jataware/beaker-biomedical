@@ -110,5 +110,7 @@ implications:
 ## Building a filter when you don't know the field
 
 1. `GET <endpoint>/_mapping` → look in `fields` for something that matches the user's intent.
-2. `GET <endpoint>?facets=<field>&size=0` → see all distinct values for that field.
+2. `GET <endpoint>?facets=<field>&size=0` → see all distinct values for that field. If the response
+   omits `aggregations` and carries `warnings.facets: "unrecognized values: [...]"`, the field name
+   is wrong; see [FACETS.md](FACETS.md) for the curated list of valid facet field names per endpoint.
 3. Build the filter, run it, inspect `data.pagination.total` before you fetch the data.

@@ -116,6 +116,9 @@ Female lung-cancer cases with at least one STAR-Counts file, open access:
 
 ## Facet + filter interaction
 
+For the curated list of valid facet field names per endpoint and the `warnings.facets` failure mode,
+see [FACETS.md](FACETS.md).
+
 When `facets` and `filters` are combined:
 
 1. The top-level operator in `filters` MUST be `and`.
