@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8889:8888"
+      - "8888:8888"
     environment:
       - DEBUG=1
       - LOGLEVEL=INFO
