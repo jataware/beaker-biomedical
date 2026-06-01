@@ -11,15 +11,15 @@ RUN chown -R 1000:1000 /jupyter
 WORKDIR /jupyter
 
 RUN rm -f /jupyter/.beaker.conf /jupyter/.env && \
-    uv pip install --system -e /jupyter
+    uv pip install --system --prerelease=allow -e /jupyter
 
 RUN mkdir -m 777 /var/run/beaker
 
 # Set jupyter user's HOME to point to /jupyter
 RUN usermod -d /jupyter jupyter
 
-RUN mkdir -p /jupyter/.local /jupyter/.pqa /jupyter/.config/biopython/Bio/Entrez/DTDs && \
-    chown -R 1000:1000 /jupyter/.local /jupyter/.pqa /jupyter/.config
+RUN mkdir -p /jupyter/.local /jupyter/.config/biopython/Bio/Entrez/DTDs && \
+    chown -R 1000:1000 /jupyter/.local /jupyter/.config
 
 ENV BEAKER_AGENT_USER=jupyter \
     BEAKER_SUBKERNEL_USER=jupyter \
@@ -30,4 +30,4 @@ USER jupyter
 RUN mkdir -p /jupyter/.beaker/skills
 RUN python /jupyter/fetch-remote-skills.py /jupyter/.beaker/skills
 
-CMD ["python", "-m", "beaker_kernel.app.notebook_app", "--ip", "0.0.0.0", "--allow-root"]
+CMD ["python", "-m", "beaker_notebook.app.server_app", "--ip", "0.0.0.0", "--allow-root"]

@@ -24,10 +24,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-
 dependencies = [
-  "beaker-kernel==2.0.0b1",
-  "archytas==2.0.0b1",
+  "beaker_notebook~=2.0.0b2",
+  "archytas>=2.0.0b1",
   "requests",
   "PyYAML",
   "idc-index",

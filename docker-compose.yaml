@@ -8,11 +8,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - ARCHYTAS_REF=upgrade              # archytas branch/tag
-        - BEAKER_KERNEL_REF=upgrade         # beaker-kernel branch/tag
     ports:
-      - "8888:8888"
+      - "8889:8888"
     environment:
       - DEBUG=1
       - LOGLEVEL=INFO
@@ -22,9 +19,6 @@ services:
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
       - TOOL_ENABLED_RUN_CODE=true
-      - BIOME_LIT_REVIEW_DIR=/jupyter/_literature_review
-      - INTEGRATION_PATH=/jupyter/adhoc_data
-      - IDC_SKILL_REF=main              # idc-claude-skill branch/tag (e.g. main or v1.4.0)
     env_file:
       - .env
     volumes:

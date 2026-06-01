@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: MIT
 from typing import TYPE_CHECKING
 
-from archytas.tool_utils import AgentRef, LoopControllerRef, ReactContextRef, tool
-from beaker_kernel.lib import BeakerAgent
+from archytas.tool_utils import tool
+from beaker_notebook.lib import BeakerAgent
 
 if TYPE_CHECKING:
-    from beaker_kernel.kernel import BeakerKernel
+    from beaker_notebook.kernel import BeakerKernel
 
 
 class BeakerBiomedicalAgent(BeakerAgent):
