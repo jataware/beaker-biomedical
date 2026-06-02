@@ -65,6 +65,37 @@ tell the user to download a fresh token from the GDC Data Portal.
 - **Do not invent fields.** Field names like `cases.demographic.sex_at_birth` are validated server-side;
   invalid fields return 400. When unsure, hit `<endpoint>/_mapping` to enumerate valid fields and field
   groups before constructing a filter. See [references/FIELDS.md](references/FIELDS.md).
+- **Don't default to TCGA — discover the relevant projects first.** GDC holds ~90 projects across ~25
+  programs; TCGA is only one program (33 projects). A disease or anatomical site almost always spans
+  several programs — breast cases live in ~20 projects, leukemia in ~11 — and the TCGA project is rarely
+  the largest (TARGET-AML has >10× the leukemia cases of TCGA-LAML). When the user names a cancer type,
+  site, or cohort instead of an explicit `project_id`, enumerate the matching projects first (next
+  section) and filter on the full set. Only narrow to a single project when the user names it.
+
+## Discovering relevant projects
+
+When the user describes data by disease, anatomical site, or clinical cohort rather than naming a
+project, find the projects that actually match *before* building the query. The most reliable pattern
+is to facet `/cases` by `project.project_id` using the same filter you will reuse downstream — the
+counts are the real per-project match counts, and the bucket keys are the project set to query:
+
+```python
+import requests
+# Which projects actually contain breast cases? (don't assume TCGA-BRCA)
+r = requests.post("https://api.gdc.cancer.gov/cases",
+    json={"filters": {"op": "in", "content": {"field": "primary_site", "value": ["Breast"]}},
+          "facets": "project.project_id", "size": 0})
+buckets = r.json()["data"]["aggregations"]["project.project_id"]["buckets"]
+project_ids = [b["key"] for b in buckets]
+# FM-AD 2583, TCGA-BRCA 1098, CMI-MBC 200, CPTAC-2 134, HCMI-CMDC 69, ... — 20 projects, not 1
+```
+
+Then filter the real `/files` or `/cases` query on `project_ids`. Other entry points: query `/projects`
+filtered by `primary_site`/`disease_type` (project-level view; note its `summary.case_count` is the
+whole-project total, not your filtered count), or `/v0/all?query=<term>` for free-text lookup. Full
+strategies, the program catalogue, and caveats are in [references/PROJECTS.md](references/PROJECTS.md);
+a worked discover-then-query recipe is in
+[examples/discover_projects_for_disease.md](examples/discover_projects_for_disease.md).
 
 ## Endpoint catalogue
 
@@ -211,6 +242,9 @@ See [references/FILTERS.md](references/FILTERS.md) for the full operator table a
   needs a token + project authorization (dbGaP `acl` value such as `phs000178`). Filter on
   `files.access` when you only want open data.
 - **Project IDs are case-sensitive and dash-separated.** `TCGA-BRCA`, not `tcga_brca`.
+- **Don't default to TCGA — a disease or site spans many projects.** Discover the full project set
+  before filtering. See [Discovering relevant projects](#discovering-relevant-projects) and
+  [references/PROJECTS.md](references/PROJECTS.md).
 - **`cases.project.project_id` ≠ `project_id`.** From the `/files` endpoint, project lives on the
   case; from `/projects`, it's top-level. Mirror the data model.
 - **`/files/{file_id}` only resolves the *latest* version of a file.** For older versions, use
@@ -247,6 +281,7 @@ print(r.json()["data"])
 
 For complete worked examples see [examples/](examples/):
 
+- [discover_projects_for_disease.md](examples/discover_projects_for_disease.md) — Find every project for a disease, then query them (don't default to TCGA).
 - [search_files_by_project.md](examples/search_files_by_project.md) — Find RNA-Seq files in TCGA-BRCA.
 - [download_file_by_uuid.md](examples/download_file_by_uuid.md) — Single-file and batch download.
 - [download_set_via_manifest.md](examples/download_set_via_manifest.md) — Search → manifest → DTT.
@@ -261,6 +296,9 @@ For complete worked examples see [examples/](examples/):
 
 ## References
 
+- [references/PROJECTS.md](references/PROJECTS.md) — How to discover which projects match a disease,
+  site, or cohort (so you don't default to TCGA); program catalogue; `summary.case_count` caveat. Load
+  before scoping a query when the user named a cancer type rather than a `project_id`.
 - [references/FILTERS.md](references/FILTERS.md) — Filter operators, wildcards, `is missing`, nested
   list semantics, full payload examples. Load when constructing or debugging a `filters` object.
 - [references/ENDPOINTS.md](references/ENDPOINTS.md) — Full endpoint table with HTTP methods and
