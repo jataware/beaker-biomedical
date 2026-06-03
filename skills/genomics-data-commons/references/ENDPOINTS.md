@@ -88,7 +88,10 @@ header and cookie auth schemes are accepted (cookie used by the Portal; header p
 Common optional fields: `attachment` (`true`/`false`, sets Content-Disposition), `filename`,
 `downloadCookieKey`, `downloadCookiePath`.
 
-See [MUTATION-FREQUENCY.md](MUTATION-FREQUENCY.md) for column definitions.
+Scope the cohort with **`case_filters`**, not `filters`: `case_filters` sets the percentage
+denominator (`num_cohort_ssm_cases`), while `filters` only restricts which mutations are ranked and
+leaves the denominator at the GDC-wide total. See
+[MUTATION-FREQUENCY.md](MUTATION-FREQUENCY.md) for column definitions and the denominator pitfall.
 
 ## Gene Expression
 

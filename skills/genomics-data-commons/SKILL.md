@@ -131,7 +131,7 @@ a worked discover-then-query recipe is in
 
 | Endpoint | Returns |
 |---|---|
-| `/genes`, `/genes/{gene_id}` | Gene summary by Ensembl ID |
+| `/genes`, `/genes/{gene_id}` | Gene summary by Ensembl ID. Listing `/genes` must default to Cancer Gene Census — see below. |
 | `/ssms`, `/ssms/{ssm_id}` | Simple somatic mutations |
 | `/ssm_occurrences`, `/ssm_occurrences/{id}` | SSMs joined to cases |
 | `/cnvs`, `/cnvs/{cnv_id}`, `/cnvs/ids` | Gene-level copy-number variation |
@@ -148,6 +148,35 @@ a worked discover-then-query recipe is in
 | `/analysis/top_ssms_by_case` | TSV: top SSMs for a case in its project (requires `case_id`) |
 
 See [references/MUTATION-FREQUENCY.md](references/MUTATION-FREQUENCY.md) for TSV column definitions.
+
+**Cancer Gene Census is the default for gene-centric queries — and you must say so.** Mirroring the
+GDC Data Portal (which shows only the ~716 COSMIC Cancer Gene Census genes by default, not all ~22,600
+annotated genes), so you must default to filtering on `is_cancer_gene_census = "true"` whenever you *list, search,
+or aggregate* genes / SSMs / CNVs — unless the user's request already constrains that field or asks
+for the full universe. **Every time you apply this default, tell the user explicitly**: that the
+result is census-only and that they can lift it. The cut is large and otherwise silent — `/genes`
+22,638→716, `/ssms` 3.32M→218k, `/cnvs` 75.4k→2,669 — so the notice is mandatory, not optional.
+
+The filter **field path differs per endpoint** — do not reuse `genes.is_cancer_gene_census`
+everywhere (verify with `<endpoint>/_mapping` if unsure):
+
+| Endpoint(s) | Census filter field |
+|---|---|
+| `/genes` | `is_cancer_gene_census` |
+| `/ssms` | `consequence.transcript.gene.is_cancer_gene_census` |
+| `/ssm_occurrences` | `ssm.consequence.transcript.gene.is_cancer_gene_census` |
+| `/cnvs` | `consequence.gene.is_cancer_gene_census` |
+| `/cnv_occurrences` | `cnv.consequence.gene.is_cancer_gene_census` |
+| `/analysis/top_mutated_genes`, `top_ssms`, `top_ssms_by_gene`, `top_ssms_by_case` | `genes.is_cancer_gene_census` |
+
+The value is the string `"true"` (or `"false"` for non-census only), never a JSON boolean; `and` it
+with the user's other filters. `/genes/{gene_id}`, `/cases`, and `/files` take no census filter
+(single-gene lookup; field absent on cases/files). See [references/ANALYSIS.md](references/ANALYSIS.md)
+and [references/MUTATION-FREQUENCY.md](references/MUTATION-FREQUENCY.md).
+
+For **top-mutated-genes**, the Portal-matching recipe is cohort in `case_filters` + census in `filters`
+(census gates eligibility, not rank). Worked example:
+[examples/top_mutated_genes.md](examples/top_mutated_genes.md).
 
 ### Gene expression
 
@@ -262,9 +291,15 @@ See [references/FILTERS.md](references/FILTERS.md) for the full operator table a
 - **GraphQL search endpoint is `/v0/graphql`** (not `/graphql`). There is no unversioned alias.
 - **The `annotations` endpoint is also reachable at the (typo'd) path `/annotatations/_mapping`** — that
   alias appears in the official OpenAPI spec but the canonical path is `/annotations/_mapping`.
-- **`filters` on the cohort API differs from `case_filters` on analysis endpoints.** Analysis endpoints
-  (top_mutated_genes, etc.) accept *both* `filters` (defining the cohort) and `case_filters` (defining
-  the case universe within the cohort). Don't conflate them.
+- **Mutation-frequency denominators come from `case_filters`, not `filters`.** On
+  `/analysis/top_mutated_genes` and the `top_ssms*` family, the cohort denominator
+  `num_cohort_ssm_cases` (cases *tested* for SSM, i.e. `available_variation_data = ssm`) is set by
+  **`case_filters`**. Pass your cohort as `filters` and the denominator instead stays at the GDC-wide
+  total (currently 18,289), collapsing cohort frequencies to nonsense — TP53 in TCGA-ACC reads 0.08%
+  via `filters` vs the correct 16.67% via `case_filters`. `filters` restricts which mutations are
+  *ranked*, not the case universe; never divide a cohort numerator by the GDC-wide denominator
+  (`num_gdc_ssm_cases`). Note `available_variation_data` lives only on the *explore* case index, not
+  REST `/cases`. See [references/MUTATION-FREQUENCY.md](references/MUTATION-FREQUENCY.md).
 - **`expand` on `/cases` is the only way to surface nested arrays** (`diagnoses`, `samples`,
   `samples.portions`, …) at full fidelity. Without `expand`, you only get the scalar fields on `case`.
 
