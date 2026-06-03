@@ -4,7 +4,7 @@ networks:
   beaker:
 
 services:
-  jupyter:
+  beaker:
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,9 +13,8 @@ services:
     environment:
       - DEBUG=1
       - LOGLEVEL=INFO
-      - JUPYTER_SERVER=http://jupyter:8888
-      - JUPYTER_TOKEN=89f73481102c46c0bc13b2998f9a4fce
-      - PYTHONPATH=/jupyter
+ #     - JUPYTER_SERVER=http://jupyter:8888
+      - PYTHONPATH=/beaker
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
       - TOOL_ENABLED_RUN_CODE=true
@@ -23,6 +22,7 @@ services:
       - .env
     volumes:
       - ./src/beaker_biomedical:/src/beaker_biomedical
-      - ./skills:/jupyter/.beaker/skills
+      - ./skills:/beaker/.beaker/skills
+      - ./skills.json:/beaker/.beaker/skills.json
     networks:
       - beaker
