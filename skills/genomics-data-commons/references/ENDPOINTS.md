@@ -71,7 +71,7 @@ Base URL: `https://api.gdc.cancer.gov`. Version-pinned: `/v0/...`.
 | GET / POST | `/analysis/top_mutated_genes_by_project` | |
 | GET / POST | `/analysis/top_mutated_cases_by_gene` | |
 | GET / POST | `/analysis/mutated_cases_count_by_project` | |
-| GET / POST | `/analysis/survival` | Raw points for survival plots; payload includes `filters` |
+| GET / POST | `/analysis/survival` | Raw KM points. `filters` as one object → single curve; as an **array** → multiple curves + log-rank `overallStats.pValue`. POST for the array form. |
 
 ## Mutation Frequency (cohort-based TSV downloads)
 

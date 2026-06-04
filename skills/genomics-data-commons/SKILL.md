@@ -141,7 +141,7 @@ a worked discover-then-query recipe is in
 | `/analysis/top_mutated_genes_by_project` | Most-mutated genes in a project |
 | `/analysis/top_mutated_cases_by_gene` | Most-affected cases for given genes |
 | `/analysis/mutated_cases_count_by_project` | Cases with any SSM per project |
-| `/analysis/survival` | Raw data for survival plots |
+| `/analysis/survival` | Raw KM points. Single `filters` = one curve (no p-value); **array** of `filters` = groups + log-rank `overallStats.pValue` |
 | `/analysis/top_mutated_genes` | TSV: top mutated genes for a cohort/filter |
 | `/analysis/top_ssms` | TSV: top SSMs for a cohort/filter |
 | `/analysis/top_ssms_by_gene` | TSV: top SSMs within a single gene context (requires `gene_id`) |
@@ -332,6 +332,7 @@ For complete worked examples see [examples/](examples/):
 - [bam_slice_by_gene.md](examples/bam_slice_by_gene.md) — Pull BRCA1 reads from a BAM.
 - [graphql_search.md](examples/graphql_search.md) — A GraphQL `cases` query.
 - [survival_analysis.md](examples/survival_analysis.md) — Survival curve data.
+- [expression_vs_survival.md](examples/expression_vs_survival.md) — "Does high \<gene\> expression affect survival?" → median-split uqFPKM + two-group log-rank, like the Portal.
 
 ## References
 

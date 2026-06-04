@@ -92,11 +92,21 @@ Four endpoints under `/analysis` produce JSON-shaped counts (as opposed to the T
 
 ## Survival
 
-`/analysis/survival` returns the raw points behind the survival plot widget in the Portal. Pass
-`filters` defining the cohort (and optional sub-stratifications).
+`/analysis/survival` returns the raw points behind the survival plot widget in the Portal. `filters`
+can be **either**:
 
-```bash
-curl 'https://api.gdc.cancer.gov/analysis/survival?filters=%7B...%7D'
+- **a single filter object** → one curve. `overallStats` comes back **empty** (`{}`) — no comparison,
+  so no p-value.
+- **an array of filter objects** `[F1, F2, …]` → one curve per group **plus** a log-rank test across
+  them in `overallStats`. This is how you get a p-value (the Portal's "Group comparisons" table).
+
+Use POST with a JSON body for the array form (GET only carries a single url-encoded `filters`).
+
+```json
+{"filters": [
+  {"op": "in", "content": {"field": "cases.case_id", "value": ["<low-group uuids>"]}},
+  {"op": "in", "content": {"field": "cases.case_id", "value": ["<high-group uuids>"]}}
+]}
 ```
 
 Response shape:
@@ -109,17 +119,19 @@ Response shape:
         {"id": "case-uuid", "submitter_id": "TCGA-...",
          "time": 1234, "censored": false, "survivalEstimate": 0.98}
       ],
-      "meta": {"id": <hash>},
-      "id": <strata-key>
+      "meta": {"id": <hash>}
     }
   ],
-  "overallStats": {"...": "..."}
+  "overallStats": {"chiSquared": 2.58, "degreesFreedom": 1, "pValue": 0.108}
 }
 ```
 
-- `time` is days from index.
-- `censored=true` means the patient was alive at last follow-up (right-censored).
-- For Kaplan-Meier plotting, group donors by strata and feed into your KM library of choice.
+- `time` is days from index; `censored=true` means alive at last follow-up (right-censored).
+- **Cases without follow-up time are dropped**, so a curve's donor count is ≤ the number of cases you
+  filtered on — report both.
+- For Kaplan-Meier plotting, feed each curve's donors into your KM library of choice.
+- To recreate the Portal's **gene-expression vs survival** (median-split a gene's `uqfpkm`, then compare
+  the two groups), see [../examples/expression_vs_survival.md](../examples/expression_vs_survival.md).
 
 ## Genes endpoint quick reference
 
