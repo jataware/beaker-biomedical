@@ -187,6 +187,9 @@ For **top-mutated-genes**, the Portal-matching recipe is cohort in `case_filters
 | `/gene_expression/gene_selection` | Top-N most variably expressed genes for a case collection |
 | `/scrna_seq/gene_expression` | scRNA-Seq per-cell expression for one case/file × up to 10 genes |
 
+**"Highly/most expressed genes in \<cancer\>" means most _variably_ expressed** (Portal behavior): use
+`/gene_expression/gene_selection` (ranks by stddev of log2-FPKM-UQ), not absolute level — and say so. Worked recipe: [examples/most_variable_genes.md](examples/most_variable_genes.md).
+
 See [references/GENE-EXPRESSION.md](references/GENE-EXPRESSION.md) and
 [references/SCRNA-SEQ.md](references/SCRNA-SEQ.md).
 
@@ -324,6 +327,7 @@ For complete worked examples see [examples/](examples/):
 - [discover_fields_mapping.md](examples/discover_fields_mapping.md) — Use `/_mapping` to find valid fields.
 - [facet_aggregation.md](examples/facet_aggregation.md) — Count cases by `primary_site` with `facets=` + `size=0`.
 - [get_gene_expression_matrix.md](examples/get_gene_expression_matrix.md) — FPKM-UQ matrix.
+- [most_variable_genes.md](examples/most_variable_genes.md) — "Highly expressed genes in a cancer?" → rank by variability like the Portal.
 - [top_mutated_genes.md](examples/top_mutated_genes.md) — Cohort-level mutation analysis.
 - [bam_slice_by_gene.md](examples/bam_slice_by_gene.md) — Pull BRCA1 reads from a BAM.
 - [graphql_search.md](examples/graphql_search.md) — A GraphQL `cases` query.

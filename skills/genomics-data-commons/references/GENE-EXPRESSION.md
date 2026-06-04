@@ -120,6 +120,13 @@ This is useful for heatmaps where you want to plot deviation from a cohort mean.
 Picks the top-N most variably expressed genes (by stddev of `log2(uqfpkm+1)`) within a cohort, filtered
 to those with median expression above `min_median_log2_uqfpkm` (default 1).
 
+**This is the endpoint for "what genes are highly/most expressed in \<cancer\>?"** — the GDC Data
+Portal answers that question with the most *variably* expressed genes, **not** the highest absolute or
+median level (which is dominated by uninformative housekeeping genes). Rank by variability here, and
+**tell the user** you did so. For breast cancer this returns `SCGB2A2` as the #1 gene, matching the
+Portal 1:1. Full worked recipe (incl. the absolute-level fallback):
+[../examples/most_variable_genes.md](../examples/most_variable_genes.md).
+
 ```bash
 curl -X POST 'https://api.gdc.cancer.gov/gene_expression/gene_selection' \
   -H 'Content-Type: application/json' \
@@ -140,14 +147,20 @@ curl -X POST 'https://api.gdc.cancer.gov/gene_expression/gene_selection' \
 
 ### Response
 
+A `gene_selection` key wrapping a list of genes, **already sorted by stddev descending** — each entry
+carries the symbol and the two ranking quantities, not just the ID:
+
 ```json
-[
-  {"gene_id":"ENSG00000141510"}
-]
+{
+  "gene_selection": [
+    {"gene_id":"ENSG00000110484","symbol":"SCGB2A2","log2_uqfpkm_median":4.95,"log2_uqfpkm_stddev":4.00},
+    {"gene_id":"ENSG00000124935","symbol":"SCGB1D2","log2_uqfpkm_median":4.01,"log2_uqfpkm_stddev":3.71}
+  ]
+}
 ```
 
-Or a richer object form if requested. See the OpenAPI for the exact `GeneSelectionResponseListOfGenes`
-schema.
+(It is **not** a bare `[{"gene_id": …}]` array — index `resp["gene_selection"]`.) Take the `gene_id`s and
+feed them into `/gene_expression/values` to build the matrix for those genes.
 
 ## Common workflows
 
