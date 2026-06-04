@@ -13,7 +13,6 @@ services:
     environment:
       - DEBUG=1
       - LOGLEVEL=INFO
- #     - JUPYTER_SERVER=http://jupyter:8888
       - PYTHONPATH=/beaker
       - ENABLE_CHECKPOINTS=true
       - TOOL_ENABLED_ASK_USER=true
