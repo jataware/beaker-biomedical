@@ -6,6 +6,12 @@ separate Proteome and Phosphoproteome studies). When the user names a disease, t
 program rather than a `pdc_study_id`, **enumerate the matching studies first**, then run the real
 per-study query over the set.
 
+These enumeration queries are also how you avoid **guessing controlled-vocabulary filter values**.
+`disease_type`, `experiment_type`, `analytical_fraction`, and `tissue_or_organ_of_origin` accept only
+exact PDC enum strings, and a wrong value returns an **empty result with no `errors`** (not a 400). So
+pull the valid values from the queries below (e.g. `diseasesAvailable` for `disease_type`,
+`allExperimentTypes` for `experiment_type`) and pass one back verbatim — never a value you assumed.
+
 ## Repository-level overview
 
 ```graphql

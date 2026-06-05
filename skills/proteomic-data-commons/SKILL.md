@@ -88,6 +88,15 @@ success, `{"errors": [...], "data": {...}}` on failure (PDC returns HTTP 200 eve
 - **Don't invent fields or query names.** The schema is fixed (40 documented queries). An unknown
   field returns an `errors` block. Consult [references/QUERIES.md](references/QUERIES.md) or
   introspect the schema before guessing.
+- **Don't guess filter *values* either — they're controlled vocabularies, and a wrong value fails
+  silently.** Arguments like `data_category`, `file_type`, `file_format`, `disease_type`,
+  `experiment_type`, `analytical_fraction`, and `sample_type` accept only exact PDC enum strings. An
+  unrecognized value returns an **empty result with no `errors`** — indistinguishable from "genuinely
+  none." So an empty list is a cue to **check the filter value, not to conclude there's no data.**
+  Discover valid values first: for files, `filesCountPerStudy(pdc_study_id: …)` returns the exact
+  `data_category` × `file_type` set for that study; for disease/tissue/experiment, use the enumeration
+  queries in [references/DISCOVERY.md](references/DISCOVERY.md). Never hardcode a plausible-sounding
+  category like `"Protein Report"` — confirm it exists first.
 
 ## Discovering studies (don't assume CPTAC-3 / a single study)
 
