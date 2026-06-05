@@ -1,0 +1,18 @@
+credentials: []
+# The PDC public GraphQL API is entirely open-access. No API key, token, cookie, OAuth flow, or
+# login is required for ANY query, metadata retrieval, or file download. There is nothing to put in
+# an Authorization header — requests are anonymous.
+#
+# "Login to PDC Workspace" exists only for *data submission*, which is NOT exposed through this
+# public GraphQL API. Likewise, a small future class of submitter-provided patient-specific protein
+# sequence databases is designated controlled-access (dbGaP authorization), but those are not served
+# by this API either.
+#
+# File download URLs (the `signedUrl { url }` field on `filesPerStudy`) are pre-signed AWS S3 links:
+#   - they expire 7 days (168 hours) after the manifest/query that generated them, and
+#   - the same file from the same IP is capped at 10 downloads per 24 hours.
+# Re-issue the query to get a fresh URL; neither limit involves credentials.
+description: >-
+  No credentials required. PDC is a fully open-access public repository; all queries and downloads
+  are anonymous. Authentication applies only to web-based data submission, which this API does not expose.
+service: "https://proteomic.datacommons.cancer.gov/"
