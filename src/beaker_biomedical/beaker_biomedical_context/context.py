@@ -26,5 +26,4 @@ class BeakerBiomedicalContext(BeakerContext):
         super().__init__(beaker_kernel, config=config)
 
     async def setup(self, context_info=None, parent_header=None):
-        # Custom setup can be done here
-        pass
+        await super().setup()
