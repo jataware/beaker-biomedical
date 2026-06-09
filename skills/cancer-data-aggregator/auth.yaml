@@ -1,0 +1,24 @@
+credentials: []
+# The Cancer Data Aggregator (CDA) is entirely open-access. Neither the `cdapython` package nor the
+# REST service (https://cda.datacommons.cancer.gov/) requires an API key, token, cookie, OAuth flow,
+# or login for ANY query. CDA publishes only harmonized METADATA, so search is intentionally anonymous
+# — there is nothing to put in an Authorization header.
+#
+# IMPORTANT: CDA returns METADATA ONLY. It locates data across the CRDC repositories (GDC, PDC, IDC,
+# GC, ICDC) but does not download data files, and there is no credential that unlocks downloads
+# through it. Every file row carries a `drs_uri` (a GA4GH DRS identifier); CDA's job ends at handing
+# you that URI.
+#   - To actually fetch bytes, take the `drs_uri` set (a manifest) to a cloud workspace —
+#     ISB Cancer Gateway in the Cloud (ISB-CGC), the Velsera Cancer Genomics Cloud (CGC), or
+#     Terra/FireCloud — and resolve the DRS objects there.
+#   - Open-access DATA is publicly resolvable. Controlled-access DATA (e.g. some GDC genomics under a
+#     dbGaP `phs*` ACL) still requires the user's own NCBI dbGaP authorization to resolve in that
+#     workspace — a property of their NIH/dbGaP account, never passed to CDA.
+#   - The `access` column ('open' / 'controlled') tells you which files will need that authorization.
+description: >-
+  No credentials required. CDA is a fully open-access, harmonized metadata/search service over the NCI
+  CRDC repositories (GDC, PDC, IDC, GC, ICDC); all `cdapython` calls and REST requests are anonymous.
+  CDA does not download data — it returns a `drs_uri` per file, which you resolve in a cloud workspace
+  (ISB-CGC, Velsera CGC, Terra/FireCloud); controlled-access data still requires the user's dbGaP
+  authorization there.
+service: "https://cda.datacommons.cancer.gov/"
