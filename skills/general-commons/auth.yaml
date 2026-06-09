@@ -1,0 +1,22 @@
+credentials: []
+# The General Commons (GC) GraphQL API is entirely open-access for metadata and search. No API key,
+# token, cookie, OAuth flow, or login is required for ANY query, including studies under controlled
+# access — the portal is intentionally searchable without login so users can check whether GC holds
+# data of interest before requesting access. There is nothing to put in an Authorization header;
+# requests are anonymous.
+#
+# IMPORTANT: this API returns METADATA ONLY. It does not download data files, and there is no
+# credential that unlocks downloads through it.
+#   - Open-access DATA is publicly available.
+#   - Controlled-access (sensitive) DATA requires authorization through NCBI's dbGaP system, and the
+#     files are accessed on the NCI Cancer Genomics Cloud (CGC) by Velsera — by exporting a manifest
+#     and loading it into a CGC workspace, NOT by direct download from this API. File records carry a
+#     CRDC DRS identifier (file_id like `dg.4DFC/<uuid>`); `file_url_in_cds` is frequently empty.
+#   - dbGaP authorization is granted per-study (the study's `acl` / `phs_accession`); it is a property
+#     of the user's NIH/dbGaP account, not something passed to this API.
+description: >-
+  No credentials required. The GC GraphQL API is a fully open-access metadata/search interface; all
+  queries are anonymous. The API does not download data — controlled-access data requires dbGaP
+  authorization and is accessed on the Cancer Genomics Cloud (CGC) by Velsera via an exported manifest.
+service: "https://general.datacommons.cancer.gov/"
+</content>
