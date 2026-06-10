@@ -1,0 +1,158 @@
+openapi: 3.1.0
+info:
+  title: bento-icdc-interoperation
+  version: x.x.x
+  description: |
+    Interoperation microservice for ICDC. Accepts a CSV file manifest via GraphQL,
+    uploads it to S3, and returns a pre-signed CloudFront URL. Also exposes simple
+    health endpoints used by the frontend and infrastructure.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://caninecommons-dev.cancer.gov
+    description: DEV
+  - url: https://caninecommons-qa.cancer.gov
+    description: QA
+  - url: https://caninecommons-stage.cancer.gov
+    description: STAGE
+  - url: https://caninecommons.cancer.gov
+    description: PROD
+
+tags:
+  - name: health
+    description: Liveness and version endpoints
+  - name: graphql
+    description: GraphQL transport (POST /api/interoperation/graphql)
+
+paths:
+  /api/interoperation/ping:
+    get:
+      tags: [health]
+      summary: Liveness check
+      operationId: getPing
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: pong
+
+  /api/interoperation/version:
+    get:
+      tags: [health]
+      summary: Service version
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+              examples:
+                example:
+                  value:
+                    version: "1.0.2.131"
+                    date: "YYYY-MM-DD"
+
+  /api/interoperation/graphql:
+    post:
+      tags: [graphql]
+      summary: Upload file manifest and get pre-signed URL
+      description: |
+        Accepts a CSV-formatted file manifest string via the storeManifest GraphQL
+        operation. The service writes the manifest to a temporary file, uploads it to
+        S3 under a UUID-based key, and returns a time-limited pre-signed CloudFront
+        URL the client can use to download the file.
+
+        This endpoint accepts POST only.
+      operationId: postGraphQL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GraphQLRequest'
+            examples:
+              storeManifest:
+                summary: Upload a file manifest
+                value:
+                  query: '{ storeManifest(manifest: "col1,col2\nval1,val2") }'
+      responses:
+        '200':
+          description: GraphQL response containing a pre-signed CloudFront URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphQLResponse'
+              examples:
+                success:
+                  summary: Successful manifest upload
+                  value:
+                    data:
+                      storeManifest: "https://d123.cloudfront.net/550e8400-e29b-41d4-a716-446655440000.csv?Policy=...&Signature=...&Key-Pair-Id=..."
+                error:
+                  summary: GraphQL error example
+                  value:
+                    errors:
+                      - message: "S3 upload failed"
+                        locations:
+                          - line: 2
+                            column: 5
+                        path: ["storeManifest"]
+                    data:
+                      storeManifest: null
+
+components:
+  schemas:
+    VersionResponse:
+      type: object
+      required: [version, date]
+      properties:
+        version:
+          type: string
+        date:
+          type: string
+          format: date
+          description: YYYY-MM-DD
+
+    GraphQLRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        variables:
+          type: object
+          additionalProperties: true
+        operationName:
+          type: string
+
+    GraphQLResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphQLError'
+
+    GraphQLError:
+      type: object
+      properties:
+        message:
+          type: string
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              line: { type: integer }
+              column: { type: integer }
+        path:
+          type: array
+          items: { type: string }

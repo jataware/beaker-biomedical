@@ -1,0 +1,134 @@
+# ICDC GraphQL Query catalogue — generated from live introspection of
+# https://caninecommons.cancer.gov/v1/graphql/ ( { __schema { queryType { fields ... } } } ).
+# Format:  queryName(arg1, arg2, ...) -> ReturnType
+# A `-> [?]` return is an auto-generated per-node list query that returns that node's
+# type (e.g. `case` -> [case], `study` -> [study]); the bracket means a list. Every node
+# query also accepts filter/first/offset/orderBy (see references/PAGINATION.md).
+# This is the authoritative, complete list (125 fields). references/QUERIES.md curates the
+# researcher-relevant subset and flags internal/empty ones.
+
+schemaVersion() -> String
+numberOfStudies() -> Int
+numberOfCases() -> Int
+numberOfSamples() -> Int
+numberOfFiles() -> Int
+numberOfStudyFiles() -> Int
+numberOfPrograms() -> Int
+numberOfAliquots() -> Int
+volumeOfData() -> Float
+volumeOfDataOfCase(case_id) -> Float
+volumeOfDataOfProgram(program_id) -> Float
+volumeOfDataOfStudy(study_code) -> Float
+sampleCountOfStudy(study_code) -> Int
+fileCountOfStudy(study_code) -> Int
+fileCountOfStudyFiles(study_code) -> Int
+aliquotCountOfStudy(study_code) -> Int
+caseCountOfStudy(study_code) -> Int
+fileCountOfCase(case_id) -> Int
+studyFileCountOfCase(case_id) -> Int
+aliquotCountOfCase(case_id) -> Int
+sampleCountOfProgram(program_id) -> Int
+fileCountOfProgram(program_id) -> Int
+studyFileCountOfProgram(program_id) -> Int
+aliquotCountOfProgram(program_id) -> Int
+studyCountOfProgram(program_id) -> Int
+caseCountOfProgram(program_id) -> Int
+sampleCountOfCase(case_id) -> Int
+programCountOfStudy(study_code) -> Int
+programsCountOfCase(case_id) -> Int
+filesInList(uuids, order_by, first, offset, orderBy, filter) -> [FileInList]
+filesInListDesc(uuids, order_by, first, offset, orderBy, filter) -> [FileInList]
+studiesByProgramId(program_id, first, offset, orderBy, filter) -> [StudyOfProgram]
+studiesByProgram(first, offset, orderBy, filter) -> [StudyOfProgram]
+filesOfCase(case_id, first, offset, orderBy, filter) -> [FilesOfCase]
+filesOfCases(case_ids, first, offset, orderBy, filter) -> [FilesOfCase]
+multiStudyCases(case_id) -> MultiStudyCases
+caseDetail(case_id) -> CaseDetail
+caseOverview(case_ids, program, study, study_type, biobank, study_participation, breed, diagnosis, disease_site, stage_of_disease, response_to_treatment, sex, neutered_status, sample_site, sample_type, sample_pathology, file_association, file_type, file_format, order_by, sort_direction, first, offset) -> [CaseOverviewES]
+casesInList(case_ids, first, offset, orderBy, filter) -> [CaseOverview]
+studyDetail(study_code, first, offset, orderBy, filter) -> [StudyDetail]
+casesByStudyId(study_id, first, offset, orderBy, filter) -> [case]
+samplesByCaseId(case_id, first, offset, orderBy, filter) -> [sample]
+filesBySampleId(sample_id, first, offset, orderBy, filter) -> [file]
+filesOfStudy(study_code, first, offset, orderBy, filter) -> [file]
+studyFiles(study_codes, first, offset, orderBy, filter) -> [file]
+fileDetail(file_ids, first, offset, orderBy, filter) -> [FileDetail]
+fileInfo(file_ids, first, offset, orderBy, filter) -> [FileInfo]
+studyStats(first, offset, orderBy, filter) -> [StudyStat]
+fileIdsFromFileName(file_name, order_by, first, offset, orderBy, filter) -> [FileOverview]
+fileIdsFromFileNameDesc(file_name, order_by, first, offset, orderBy, filter) -> [FileOverview]
+unifiedViewData(case_ids) -> UnifiedCounts
+studySampleSiteCount(study_codes, first, offset, orderBy, filter) -> [GroupCount]
+studySampleTypeCount(study_codes, first, offset, orderBy, filter) -> [GroupCount]
+studySamplePathologyCount(study_codes, first, offset, orderBy, filter) -> [GroupCount]
+clinicalDataNodeCounts(study_code) -> ClinicalDataNodeCounts
+clinicalDataNodeCaseCounts(study_code) -> ClinicalDataNodeCounts
+clinicalDataNodeNames() -> [String]
+agentNodeData(study_code, first, offset, orderBy, filter) -> [AgentNodeData]
+cycleNodeData(study_code, first, offset, orderBy, filter) -> [CycleNodeData]
+visitNodeData(study_code, first, offset, orderBy, filter) -> [VisitNodeData]
+followUpNodeData(study_code, first, offset, orderBy, filter) -> [FollowUpNodeData]
+adverseEventNodeData(study_code, first, offset, orderBy, filter) -> [AdverseEventNodeData]
+offTreatmentNodeData(study_code, first, offset, orderBy, filter) -> [OffTreatmentNodeData]
+offStudyNodeData(study_code, first, offset, orderBy, filter) -> [OffStudyNodeData]
+priorTherapyNodeData(study_code, first, offset, orderBy, filter) -> [PriorTherapyNodeData]
+priorSurgeryNodeData(study_code, first, offset, orderBy, filter) -> [PriorSurgeryNodeData]
+agentAdministrationNodeData(study_code, first, offset, orderBy, filter) -> [AgentAdministrationNodeData]
+physicalExamNodeData(study_code, first, offset, orderBy, filter) -> [PhysicalExamNodeData]
+vitalSignsNodeData(study_code, first, offset, orderBy, filter) -> [VitalSignsNodeData]
+diseaseExtentNodeData(study_code, first, offset, orderBy, filter) -> [DiseaseExtentNodeData]
+priorSurgeryNodeDataOverview(study_code) -> PriorSurgeryNodeDataOverview
+cartOverview(file_uuids) -> CartOverviewData
+humanRelevanceNodeData(study_codes, first, offset, orderBy, filter) -> [HumanRelevanceNodeData]
+breedCaseCount(breed, cases, filter, first, offset, orderBy) -> [?]
+cartChartData(id, filter, first, offset, orderBy) -> [?]
+cartChartItem(label, value, filter, first, offset, orderBy) -> [?]
+cartOverviewData(totalNumberOfFiles, studiesInCart, totalNumberOfCases, filter, first, offset, orderBy) -> [?]
+caseOverview2(case_id, study_code, study_type, cohort, breed, diagnosis, stage_of_disease, age, sex, neutered_status, weight, response_to_treatment, disease_site, files, other_cases, individual_id, primary_disease_site, date_of_diagnosis, histology_cytopathology, histological_grade, pathology_report, treatment_data, follow_up_data, concurrent_disease, concurrent_disease_type, arm, filter, first, offset, orderBy) -> [?]
+fileInList(file_name, file_type, association, file_description, file_format, file_size, case_id, breed, diagnosis, study_code, file_uuid, md5sum, sample_id, individual_id, sample_site, physical_sample_type, general_sample_pathology, tumor_sample_origin, summarized_sample_type, specific_sample_pathology, date_of_sample_collection, tumor_grade, sample_chronology, percentage_tumor, necropsy_sample, sample_preservation, comment, patient_age_at_enrollment, sex, neutered_indicator, weight, weight_unit, disease_term, primary_disease_site, stage_of_disease, date_of_diagnosis, histology_cytopathology, histological_grade, best_response, pathology_report, treatment_data, follow_up_data, concurrent_disease, concurrent_disease_type, cohort_description, arm, other_cases, name, drs_uri, file_location, patient_id, case_name, cohort_dose, cohort_id, demographic_id, additional_breed_detail, date_of_birth, diagnosis_id, histology_date, molecular_subtype, tumor_length, tumor_width, tumor_volume, filter, first, offset, orderBy) -> [?]
+fileOverview(file_level, case_ids, sample_ids, file_uuids, program, study, study_type, biobank, study_participation, breed, diagnosis, disease_site, stage_of_disease, response_to_treatment, sex, neutered_status, sample_site, sample_type, sample_pathology, file_association, file_type, file_format, order_by, sort_direction, first, offset) -> [FileOverviewES]
+fileOverview2(parent, file_name, file_type, file_description, file_format, file_size, md5sum, file_status, uuid, file_location, filter, first, offset, orderBy) -> [?]
+groupCount(group, count, code, filter, first, offset, orderBy) -> [?]
+link(text, url, filter, first, offset, orderBy) -> [?]
+sampleOverview(case_ids, sample_ids, program, study, study_type, biobank, study_participation, breed, diagnosis, disease_site, stage_of_disease, response_to_treatment, sex, neutered_status, sample_site, sample_type, sample_pathology, file_association, file_type, file_format, order_by, sort_direction, first, offset) -> [SampleOverviewES]
+studyOfProgram(program_id, clinical_study_id, clinical_study_designation, clinical_study_name, clinical_study_description, clinical_study_type, accession_id, study_disposition, date_of_iacuc_approval, dates_of_conduct, numberOfCases, numberOfStudyFiles, numberOfCaseFiles, numberOfImageCollections, numberOfPublications, numberOfCRDCNodes, filter, first, offset, orderBy) -> [?]
+studyStat(study_code, files, total_size_MB, cases, samples, filter, first, offset, orderBy) -> [?]
+unifiedCounts(numberOfStudies, numberOfCases, numberOfFiles, numberOfSamples, numberOfStudyFiles, numberOfPrograms, numberOfAliquots, volumeOfData, filter, first, offset, orderBy) -> [?]
+adverse_event(day_in_cycle, date_of_onset, existing_adverse_event, date_of_resolution, ongoing_adverse_event, adverse_event_term, adverse_event_description, adverse_event_grade, adverse_event_grade_description, adverse_event_agent_name, adverse_event_agent_dose, attribution_to_research, attribution_to_ind, attribution_to_disease, attribution_to_commercial, attribution_to_other, other_attribution_description, dose_limiting_toxicity, unexpected_adverse_event, filter, first, offset, orderBy) -> [?]
+agent(medication, document_number, filter, first, offset, orderBy) -> [?]
+agent_administration(document_number, medication, route_of_administration, medication_lot_number, medication_vial_id, medication_actual_units_of_measure, medication_duration, medication_duration_unit, medication_duration_original, medication_duration_original_unit, medication_units_of_measure, medication_actual_dose, medication_actual_dose_unit, medication_actual_dose_original, medication_actual_dose_original_unit, phase, start_time, stop_time, dose_level, dose_level_unit, dose_level_original, dose_level_original_unit, dose_units_of_measure, date_of_missed_dose, medication_missed_dose, missed_dose_amount, missed_dose_amount_unit, missed_dose_amount_original, missed_dose_amount_original_unit, missed_dose_units_of_measure, medication_course_number, comment, filter, first, offset, orderBy) -> [?]
+assay(schema_validation_placeholder, filter, first, offset, orderBy) -> [?]
+biospecimen_source(biospecimen_repository_acronym, biospecimen_repository_full_name, filter, first, offset, orderBy) -> [?]
+canine_individual(canine_individual_id, filter, first, offset, orderBy) -> [?]
+case(case_id, patient_id, patient_first_name, filter, first, offset, orderBy) -> [?]
+cohort(cohort_description, cohort_dose, cohort_id, filter, first, offset, orderBy) -> [?]
+cycle(cycle_number, date_of_cycle_start, date_of_cycle_end, filter, first, offset, orderBy) -> [?]
+demographic(demographic_id, breed, additional_breed_detail, patient_age_at_enrollment, patient_age_at_enrollment_unit, patient_age_at_enrollment_original, patient_age_at_enrollment_original_unit, date_of_birth, sex, weight, weight_unit, weight_original, weight_original_unit, neutered_indicator, filter, first, offset, orderBy) -> [?]
+diagnosis(diagnosis_id, disease_term, primary_disease_site, stage_of_disease, date_of_diagnosis, histology_cytopathology, date_of_histology_confirmation, histological_grade, best_response, pathology_report, treatment_data, follow_up_data, concurrent_disease, concurrent_disease_type, filter, first, offset, orderBy) -> [?]
+disease_extent(lesion_number, lesion_site, lesion_description, previously_irradiated, previously_treated, measurable_lesion, target_lesion, date_of_evaluation, measured_how, longest_measurement, longest_measurement_unit, longest_measurement_original, longest_measurement_original_unit, evaluation_number, evaluation_code, filter, first, offset, orderBy) -> [?]
+enrollment(enrollment_id, date_of_registration, registering_institution, initials, date_of_informed_consent, site_short_name, veterinary_medical_center, patient_subgroup, filter, first, offset, orderBy) -> [?]
+file(file_name, file_type, file_description, file_format, file_size, md5sum, file_status, uuid, file_location, filter, first, offset, orderBy) -> [?]
+follow_up(document_number, date_of_last_contact, patient_status, explain_unknown_status, contact_type, treatment_since_last_contact, physical_exam_performed, physical_exam_changes, filter, first, offset, orderBy) -> [?]
+human_relevance(human_relevance_record_id, human_relevance_statement, relevant_human_cancer, relevant_experimental_therapeutic_intervention, relevant_human_genes, relevant_human_pathways, nci_link_to_relevant_human_cancer, filter, first, offset, orderBy) -> [?]
+image(schema_validation_placeholder, filter, first, offset, orderBy) -> [?]
+image_collection(image_collection_name, image_type_included, image_collection_url, repository_name, collection_access, filter, first, offset, orderBy) -> [?]
+lab_exam(schema_validation_placeholder, filter, first, offset, orderBy) -> [?]
+off_study(document_number, date_off_study, reason_off_study, date_of_disease_progression, date_off_treatment, best_resp_vet_tx_tp_secondary_response, date_last_medication_administration, best_resp_vet_tx_tp_best_response, date_of_best_response, filter, first, offset, orderBy) -> [?]
+off_treatment(document_number, date_off_treatment, reason_off_treatment, date_of_disease_progression, best_resp_vet_tx_tp_secondary_response, date_last_medication_administration, best_resp_vet_tx_tp_best_response, date_of_best_response, filter, first, offset, orderBy) -> [?]
+physical_exam(date_of_examination, day_in_cycle, body_system, pe_finding, pe_comment, phase_pe, assessment_timepoint, filter, first, offset, orderBy) -> [?]
+principal_investigator(pi_first_name, pi_last_name, pi_middle_initial, filter, first, offset, orderBy) -> [?]
+prior_surgery(date_of_surgery, procedure, anatomical_site_of_surgery, surgical_finding, residual_disease, therapeutic_indicator, filter, first, offset, orderBy) -> [?]
+prior_therapy(date_of_first_dose, date_of_last_dose, agent_name, dose_schedule, total_dose, total_dose_unit, total_dose_original, total_dose_original_unit, agent_units_of_measure, best_response_to_prior_therapy, nonresponse_therapy_type, prior_therapy_type, prior_steroid_exposure, number_of_prior_regimens_steroid, total_number_of_doses_steroid, date_of_last_dose_steroid, prior_nsaid_exposure, number_of_prior_regimens_nsaid, total_number_of_doses_nsaid, date_of_last_dose_nsaid, tx_loc_geo_loc_ind_nsaid, min_rsdl_dz_tx_ind_nsaids_treatment_pe, therapy_type, any_therapy, number_of_prior_regimens_any_therapy, total_number_of_doses_any_therapy, date_of_last_dose_any_therapy, treatment_performed_at_site, treatment_performed_in_minimal_residual, filter, first, offset, orderBy) -> [?]
+program(program_name, program_acronym, program_short_description, program_full_description, program_external_url, program_sort_order, filter, first, offset, orderBy) -> [?]
+publication(publication_title, authorship, year_of_publication, journal_citation, digital_object_id, pubmed_id, filter, first, offset, orderBy) -> [?]
+registration(registration_origin, registration_id, filter, first, offset, orderBy) -> [?]
+sample(sample_id, sample_site, physical_sample_type, general_sample_pathology, tumor_sample_origin, summarized_sample_type, molecular_subtype, specific_sample_pathology, date_of_sample_collection, sample_chronology, necropsy_sample, tumor_grade, length_of_tumor, length_of_tumor_unit, length_of_tumor_original, length_of_tumor_original_unit, width_of_tumor, width_of_tumor_unit, width_of_tumor_original, width_of_tumor_original_unit, volume_of_tumor, volume_of_tumor_unit, volume_of_tumor_original, volume_of_tumor_original_unit, percentage_tumor, sample_preservation, comment, filter, first, offset, orderBy) -> [?]
+study(clinical_study_id, clinical_study_designation, clinical_study_name, clinical_study_description, clinical_study_type, date_of_iacuc_approval, dates_of_conduct, accession_id, study_disposition, filter, first, offset, orderBy) -> [?]
+study_arm(arm, ctep_treatment_assignment_code, arm_description, arm_id, filter, first, offset, orderBy) -> [?]
+study_site(site_short_name, veterinary_medical_center, registering_institution, filter, first, offset, orderBy) -> [?]
+visit(visit_date, visit_number, visit_id, filter, first, offset, orderBy) -> [?]
+vital_signs(date_of_vital_signs, body_temperature, body_temperature_unit, body_temperature_original, body_temperature_original_unit, pulse, pulse_unit, pulse_original, pulse_original_unit, respiration_rate, respiration_rate_unit, respiration_rate_original, respiration_rate_original_unit, respiration_pattern, systolic_bp, systolic_bp_unit, systolic_bp_original, systolic_bp_original_unit, pulse_ox, pulse_ox_unit, pulse_ox_original, pulse_ox_original_unit, patient_weight, patient_weight_unit, patient_weight_original, patient_weight_original_unit, body_surface_area, body_surface_area_unit, body_surface_area_original, body_surface_area_original_unit, modified_ecog, ecg, assessment_timepoint, phase, filter, first, offset, orderBy) -> [?]
+searchCases(case_ids, program, study, study_type, biobank, study_participation, breed, diagnosis, disease_site, stage_of_disease, response_to_treatment, sex, neutered_status, sample_site, sample_type, sample_pathology, file_association, file_type, file_format, search_text) -> SearchResult
+globalSearch(input, first, offset) -> GlobalSearchResult
+createManifest(uuid, order_by, sort_direction, first, offset) -> String
+externalDataOverview(clinical_study_designation, order_by, sort_direction, first, offset) -> [ExternalDataOverview]

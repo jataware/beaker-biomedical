@@ -1,0 +1,23 @@
+credentials: []
+# The Integrated Canine Data Commons (ICDC) GraphQL API is entirely open-access. No API key, token,
+# cookie, OAuth flow, or login is required for ANY query. There is nothing to put in an Authorization
+# header; requests are anonymous. The only transport requirement is that requests use HTTP POST
+# (a GET to the endpoint is rejected with "API will only accept POST requests").
+#
+# IMPORTANT: this API returns METADATA and SEARCH results ONLY. It does not stream file bytes, and
+# there is no credential that unlocks downloads through it.
+#   - ICDC data is currently entirely OPEN-access: every file record carries acl ['Open'] and all
+#     studies are study_disposition 'Unrestricted'. There is no dbGaP / controlled-access tier in
+#     ICDC today (unlike some sibling CRDC commons).
+#   - File records expose a CRDC DRS identifier (GUID like `dg.4DFC/<uuid>`, i.e.
+#     drs://nci-crdc.datacommons.io/dg.4DFC/<uuid>) and an `s3://` `file_location`. Download bytes
+#     out-of-band: resolve the DRS id, or export a file manifest (createManifest / the front-end's
+#     cart) and load it into the NCI Cancer Genomics Cloud (CGC) by Velsera for analysis.
+#   - The separate interoperation microservice (storeManifest) uploads a manifest CSV to S3 and
+#     returns a time-limited signed CloudFront URL for the CGC hand-off; it is not part of this
+#     GraphQL endpoint and still needs no end-user credential.
+description: >-
+  No credentials required. The ICDC GraphQL API is a fully open-access metadata/search interface; all
+  queries are anonymous (HTTP POST only). The API does not download data — files are open-access and
+  fetched out-of-band via their CRDC DRS id or by exporting a manifest to the Cancer Genomics Cloud.
+service: "https://caninecommons.cancer.gov/"
