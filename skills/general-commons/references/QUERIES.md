@@ -4,17 +4,54 @@ Single endpoint: `POST https://general.datacommons.cancer.gov/v1/graphql/` with 
 `{"query": "{ queryName(args) { fields } }"}`. GC returns HTTP 200 even on query errors — inspect the
 `errors` array. Arguments are GraphQL named args (strings double-quoted, ints bare, lists in `[...]`).
 
-The queries below are the documented **Data Type Queries** (untransformed records straight from the GC
-Memgraph database) plus the count and version queries. A few live queries beyond the official doc are
-noted as such. There are also **UI/transform queries** (`globalSearch`, `*Overview`, `studyList`, …)
-covered under "Discovery helpers"; prefer the Data Type Queries for structured pulls.
+GC exposes **73 queries in two families** (full introspected list:
+[../assets/query-fields.txt](../assets/query-fields.txt); authoritative schema:
+[../assets/general-commons-schema.graphql](../assets/general-commons-schema.graphql)):
+
+1. **Faceted search (Elasticsearch-backed)** — `searchSubjects` + the `*Overview` row queries: the
+   cohort-builder, centered on the **subject**. Documented in [SEARCH.md](SEARCH.md); summarized below.
+2. **Data Type Queries (Gen3-style)** — untransformed per-study records straight from the graph
+   database (`participants`, `diagnoses`, `treatments`, `files`, …). The bulk of this file.
+
+Plus repository **metrics**, per-entity **counts**, and **version/detail** helpers.
 
 **Pagination:** every list query takes `first` (page size, default **10**, max **10000**) and `offset`
 (default 0). See [PAGINATION.md](PAGINATION.md). Per-node field lists: [ENTITIES.md](ENTITIES.md) and
 [DATA-TYPES.md](DATA-TYPES.md).
 
 `phs_accession` is the dbGaP study accession (e.g. `phs001287`) and is **required** on every per-study
-query — it is marked **REQ** below.
+Data Type Query — it is marked **REQ** below.
+
+---
+
+## Faceted search (Bento ES) — the cohort-builder → [SEARCH.md](SEARCH.md)
+
+Centered on the **subject** (= participant). All share a ~40-dimension facet arg set (lists; OR within a
+facet, AND across facets). Full facets, return shapes, and `subjectCountBy*`/`filterSubjectCountBy*`/
+`donutCountBy*` are in [SEARCH.md](SEARCH.md).
+
+| Query | Returns | Use |
+|---|---|---|
+| `searchSubjects(...facets, search_text)` | `SearchResult` | Counts + per-facet group counts (`GroupCount { group subjects }`). **Not paged; no record rows.** |
+| `subjectOverview(...facets + paging)` | `[SubjectOverview]` | Paged subject rows (incl. `samples`, `files` as DRS ids). |
+| `sampleOverview(...facets + paging)` | `[SampleOverview]` | Paged sample rows. |
+| `fileOverview(...facets + paging)` | `[FileOverview]` | Paged file rows. |
+| `protocolOverview(...facets + paging)` | `[ProtocolOverview]` | Paged protocol rows. |
+| `filesInList(...facets + paging)` | `[FilesInList]` | File rows **with `drs_uri`** + `associated_*` — build a download manifest ([FILES.md](FILES.md)). |
+| `fileIDsFromList(subject_ids, sample_ids, file_names, file_ids, study_participant_ids, protocol_pk_ids)` | `[String]` | Resolve mixed ids → file ids. |
+| `idsLists` / `findSubjectIdsInList(subject_ids)` | `IdsLists` / `[SubjectResult]` | Subject id helpers. |
+
+> Faceted bucket counts use the field name **`subjects`**, not `count`.
+
+## Repository metrics (no args)
+
+`numberOfStudies`, `numberOfSubjects`, `numberOfSamples`, `numberOfFiles`, `numberOfDiseaseSites`,
+`numberOfImages`, `numberOfProteomics` → `Int`. (These are repository-wide; `searchSubjects` returns the
+same metric names scoped to a filter.) `idsLists` → `{ subjectIds }`.
+
+---
+
+# Data Type Queries
 
 ---
 
@@ -122,10 +159,10 @@ All take **`phs_accession` REQ**, `file_ids` ([String]), `first`, `offset`, plus
 
 ---
 
-## Study extras — live but **not** in the official doc
+## Study extras (caNanoLab / NCIcaNano and study metadata)
 
-These exist in the live schema (verified) though they're absent from the upstream Data Type Queries
-doc. Several back the caNanoLab/NCIcaNano nanomaterials program. All take `first`/`offset`.
+These are in the backend schema and live. Several back the caNanoLab/NCIcaNano nanomaterials program.
+All take `first`/`offset`.
 
 | Query | Id arg + scope | Node fields (highlights) |
 |---|---|---|
@@ -164,18 +201,19 @@ Counts are the cheap way to size a study before pulling records.
 
 ---
 
-## Discovery helpers (UI/transform queries — use sparingly)
+## Discovery & detail helpers
 
-Not Data Type Queries (they transform data for the portal), but handy for discovery:
+Portal-facing summary/detail views — handy for discovery (the faceted-search family is documented
+separately in [SEARCH.md](SEARCH.md)):
 
 - `globalSearch(input: "<text>" first offset)` → free-text hits bucketed into `studies subjects samples
-  files programs about_page model` with per-bucket counts. The fastest "is this in GC?" check.
+  files programs about_page model` with per-bucket counts (`study_count`, `subject_count`, …). The
+  fastest "is this in GC?" check.
 - `programList { acronym name website num_studies }` → flat program list with study counts.
 - `studyList { study_name phs_accession data_type numberOfSubjects numberOfFiles study_access
   study_version }` → flat study list.
-- `studyDetail(phs_accession: "...")`, `subjectDetail(subject_id: "...")` → portal detail views.
-- `searchSubjects(...)`, `subjectOverview/sampleOverview/fileOverview(...)` → faceted cohort search with
-  a large shared filter arg set (`experimental_strategies`, `file_types`, `sex`, `sample_types`,
-  `primary_diagnoses`, `study_data_types`, `accesses`, `acl`, …) plus `order_by`/`sort_direction`.
-  These mirror the portal's filter UI; reach for them only when a faceted cross-study search is needed.
-</content>
+- `programDetail(program_name: "...")` → program summary with its studies and per-study counts.
+- `studyDetail(phs_accession: "...")` → one study's summary (`study_acronym study_description
+  data_types study_external_url numberOfSubjects numberOfSamples numberOfFiles numberOfDiseaseSites`).
+- `subjectDetail(subject_id: "...")` → one subject with its `files` and `samples` nested.
+- `samplesForSubjectId(subject_id: "...")` → `[Sample]` for a subject.
