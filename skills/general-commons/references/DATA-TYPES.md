@@ -62,4 +62,3 @@ GC hosts the NCI Alliance for Nanotechnology's caNanoLab data, surfaced through 
 
 All of these have matching `*Count` queries (require `phs_accession`) for sizing — see
 [QUERIES.md](QUERIES.md).
-</content>

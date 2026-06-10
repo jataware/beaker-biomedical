@@ -71,4 +71,3 @@ print(len(participants))
 - **No total in the payload** — drive loops off page length, and use the `*Count` queries when you need
   an exact total up front.
 - All scalar values come back as **String** (e.g. `file_size: "25920500"`) — cast as needed.
-</content>

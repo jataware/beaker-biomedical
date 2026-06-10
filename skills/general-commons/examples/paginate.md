@@ -56,4 +56,3 @@ assert len(participants) == total
   they need `phs_accession` for per-study nodes.
 - **The default page is 10** — never rely on it; always pass `first`.
 - All scalar values are **Strings**; cast as needed.
-</content>

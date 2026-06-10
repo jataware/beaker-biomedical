@@ -24,8 +24,29 @@ is_supplementary_file submission_version crdc_id phs_accession participant_ids`.
 
 `file_id` looks like `dg.4DFC/0359521d-648a-5337-b86b-9b62b8dd75f7` — a **GA4GH DRS** identifier in the
 CRDC indexd namespace (`dg.4DFC`), **not** an HTTP link. `file_url_in_cds` is frequently empty (`""`).
-You resolve the actual cloud object through the DRS/CRDC infrastructure or, in practice, by loading a
-manifest into CGC — not by GET-ing a field from this API.
+You resolve the actual cloud object through the DRS/CRDC infrastructure
+(`drs://nci-crdc.datacommons.io/dg.4DFC/<uuid>`) or, in practice, by loading a manifest into CGC — not
+by GET-ing a field from this API.
+
+## Faceted-layer file queries (the manifest path)
+
+The Bento faceted layer ([SEARCH.md](SEARCH.md)) is usually the better way to assemble a download set,
+because it works **across studies** and emits DRS URIs directly:
+
+- `filesInList(...facets)` → `[FilesInList]` carries a ready-made **`drs_uri`**
+  (`drs://nci-crdc.datacommons.io/dg.4DFC/<uuid>`) alongside `file_id`, `file_name`, `file_size`,
+  `md5sum`, `accesses`, and the `associated_*` fields (paired index/sidecar files). This *is* the
+  manifest.
+- `fileOverview(...facets)` → `[FileOverview]` for browsing file rows with their facet context.
+- `subjectOverview` / `sampleOverview` return each subject's/sample's `files` as DRS ids (`dg.4DFC/…`).
+
+```graphql
+{ filesInList(phs_accession: ["phs001905"], file_types: ["CRAM"], first: 100)
+  { file_name file_type file_size file_id drs_uri accesses } }
+# -> file_id "dg.4DFC/ed92e644-…", drs_uri "drs://nci-crdc.datacommons.io/dg.4DFC/ed92e644-…", accesses ["Controlled"]
+```
+
+> `FilesInList` has **no `acl` field** — access is on `accesses` (e.g. `["Open"]` / `["Controlled"]`).
 
 ## Open vs controlled access
 
@@ -44,9 +65,10 @@ interest before requesting dbGaP access.
 
 The real workflow GC supports:
 
-1. Build a cohort with the queries here (filter `files` / `samples` / `participants`).
-2. Export a **manifest** (the portal's "shopping cart" → manifest; programmatically, the manifest is
-   the set of `file_id` + metadata rows you assembled).
+1. Build a cohort — either the faceted layer (`searchSubjects` → `filesInList`/`fileOverview`,
+   across studies) or the Data Type `files` query (one study by `phs_accession`).
+2. Export a **manifest** — programmatically, the `file_id` + `drs_uri` + metadata rows from
+   `filesInList` (the portal's "shopping cart" produces the same).
 3. Load the manifest into a **CGC by Velsera** workspace, where (with dbGaP authorization for
    controlled data) the files are analyzed in-cloud with 200+ preinstalled tools — no local download.
 
@@ -61,4 +83,3 @@ workflow and the dbGaP authorization step — don't imply a direct fetch.**
 - `file_size` is a String of bytes — cast before summing.
 - To find which modality a file carries, join on `file_id` to `genomic_info` / `proteomics` / `images`
   / `multiplex_microscopies` / `non_dicom*` (see [DATA-TYPES.md](DATA-TYPES.md)).
-</content>

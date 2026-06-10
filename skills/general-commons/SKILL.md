@@ -23,12 +23,33 @@ metadata:
 The NCI **General Commons** (GC, formerly the **Cancer Data Service / CDS**) is the data-type-agnostic
 repository in the Cancer Research Data Commons (CRDC). It stores studies from NCI-funded programs whose
 data don't fit the requirements of a specialized commons (Genomic, Proteomic, Imaging, …). Its GraphQL
-API exposes study, program, participant, clinical, biospecimen, and file metadata across all GC studies.
-As of this writing GC holds ~9 programs and ~89 studies (call `studiesCount` / `programsCount` for live
-totals; `version` for the data release).
+API exposes study, program, subject/participant, clinical, biospecimen, sequencing, imaging,
+proteomics, and file metadata across all GC studies. As of this writing GC holds **9 programs, 89
+studies, ~120,900 subjects, ~109,500 samples, ~615,800 files, ~111,500 images** (call the metrics
+queries below for live totals; GraphQL schema `3.1.0`, data model `8.0.1`, data release `12.0.0`).
 
-**Endpoint:** `https://general.datacommons.cancer.gov/v1/graphql/` — a **single GraphQL endpoint**.
-A GET returns the schema; POST a `{"query": "..."}` body to run queries. There is no REST API.
+**Endpoint:** `https://general.datacommons.cancer.gov/v1/graphql/` — a **single GraphQL endpoint**
+(trailing slash matters). A GET returns the schema; POST a `{"query": "..."}` body to run queries.
+There is no REST API.
+
+## Two query families (pick the right one)
+
+GC is a Bento-framework commons exposing **73 queries** in two families — see [references/QUERIES.md](references/QUERIES.md):
+
+1. **Faceted search (Elasticsearch-backed)** — the cohort-building entry point, centered on the
+   **subject**. `searchSubjects` returns repository counts **and** per-facet group counts across ~40
+   dimensions (diagnosis, sex, sample type, experimental strategy, study, …); `subjectOverview` /
+   `sampleOverview` / `fileOverview` / `protocolOverview` return the matching paged rows for the same
+   filters; `filesInList` builds a download manifest with DRS URIs. See [references/SEARCH.md](references/SEARCH.md).
+2. **Data Type Queries (Gen3-style)** — untransformed per-study records: `programs`, `studies`,
+   `participants`, `diagnoses`, `treatments`, `samples`, `files`, `genomic_info`, `proteomics`, `pdx`,
+   the imaging-modality nodes, and the caNanoLab nodes (`investigators`, `characterizations`,
+   `publications`, `protocols`, `compositions`, `consent_groups`). Most require `phs_accession`.
+
+Plus repository **metrics** (`numberOfStudies`/`numberOfSubjects`/`numberOfSamples`/`numberOfFiles`/
+`numberOfImages`/`numberOfProteomics`/`numberOfDiseaseSites`), per-entity `*Count` queries, `version`,
+and discovery helpers (`globalSearch`, `programList`, `studyList`, `programDetail`, `studyDetail`,
+`subjectDetail`).
 
 ## When to use this skill (read first — GC is a fallback)
 
@@ -86,9 +107,15 @@ even on query errors** — always inspect `errors`. See [examples/quickstart.md]
 - **Don't invent fields or query names.** The schema is fixed; an unknown field returns an `errors`
   block. The catalogue is [references/QUERIES.md](references/QUERIES.md); introspect with
   `{ __type(name:"File"){ fields { name } } }` when unsure.
-- **"participant" (Data Type Queries) and "subject" (UI/transform queries) are the same entity.** The
-  documented queries say `participant`; the portal-facing helpers (`searchSubjects`, `subjectOverview`,
-  `numberOfSubjects`) say `subject`. Prefer the documented Data Type Queries for structured pulls.
+- **"subject" (faceted search) and "participant" (Data Type Queries) are the same entity — two views,
+  not two datasets.** Pick the family by task: the **subject** queries (`searchSubjects`,
+  `subjectOverview`, `numberOfSubjects`) are the cohort-builder — filter across studies by
+  characteristic, get facet counts. The **participant** Data Type Queries (`participants`, `diagnoses`,
+  `treatments`, `samples`, `files`) are for pulling the structured records of a known study by
+  `phs_accession`. A typical flow is `searchSubjects`/`subjectOverview` to find the cohort, then the
+  Data Type Queries (or `phs_accession`) to pull its full records. See [references/SEARCH.md](references/SEARCH.md).
+- **In the faceted layer, each facet bucket's count field is `subjects`, not `count`** (`GroupCount {
+  group subjects }`). Asking for `count` there is a `FieldUndefined` error.
 
 ## Discovering studies & programs
 
@@ -107,17 +134,19 @@ Full arguments and returned fields are in [references/QUERIES.md](references/QUE
 field lists are in [references/ENTITIES.md](references/ENTITIES.md) and
 [references/DATA-TYPES.md](references/DATA-TYPES.md).
 
-| Group | Queries |
+| Family | Queries |
 |---|---|
-| Program / study | `programs`, `studies` |
-| Clinical / biospecimen (per study) | `participants`, `diagnoses`, `treatments`, `samples` |
-| Files & sequencing | `files`, `genomic_info` |
-| Proteomics / PDX | `proteomics`, `pdx` |
-| Imaging modalities | `images`, `multiplex_microscopies`, `non_dicomct_images`, `non_dicommr_images`, `non_dicompet_images`, `non_dicom_pathology_images`, `non_dicom_radiology_all_modalities` |
-| caNanoLab / study extras (undocumented but live) | `investigators`, `characterizations`, `publications`, `protocols`, `compositions`, `consent_groups` |
+| **Faceted search** (ES) → [SEARCH.md](references/SEARCH.md) | `searchSubjects` (counts + facets), `subjectOverview`, `sampleOverview`, `fileOverview`, `protocolOverview`, `filesInList`, `fileIDsFromList`, `idsLists`, `findSubjectIdsInList` |
+| Metrics | `numberOfStudies`, `numberOfSubjects`, `numberOfSamples`, `numberOfFiles`, `numberOfImages`, `numberOfProteomics`, `numberOfDiseaseSites` |
+| Data Type — program / study | `programs`, `studies` |
+| Data Type — clinical / biospecimen (per study) | `participants`, `diagnoses`, `treatments`, `samples` |
+| Data Type — files & sequencing | `files`, `genomic_info` |
+| Data Type — proteomics / PDX | `proteomics`, `pdx` |
+| Data Type — imaging modalities | `images`, `multiplex_microscopies`, `non_dicomct_images`, `non_dicommr_images`, `non_dicompet_images`, `non_dicom_pathology_images`, `non_dicom_radiology_all_modalities` |
+| Data Type — caNanoLab / study extras | `investigators`, `characterizations`, `publications`, `protocols`, `compositions`, `consent_groups` |
 | Counts | `programsCount`, `studiesCount`, `versionsCount` (no args); per-study `*Count` (require `phs_accession`) |
 | Version | `version`, `schemaVersion`, `schemaModelVersion` |
-| Discovery helpers (UI/transform) | `globalSearch`, `programList`, `studyList`, `studyDetail` |
+| Detail / discovery helpers | `globalSearch`, `programList`, `studyList`, `programDetail`, `studyDetail`, `subjectDetail`, `samplesForSubjectId` |
 
 ## Argument syntax
 
@@ -158,28 +187,33 @@ For complete worked examples see [examples/](examples/):
 
 - [quickstart.md](examples/quickstart.md) — GET vs POST, the request helper, error handling.
 - [discover_studies.md](examples/discover_studies.md) — Programs/studies, `globalSearch`, deciding if GC is the right commons.
+- [faceted_search.md](examples/faceted_search.md) — `searchSubjects` facets → cohort → `subjectOverview`/`fileOverview` rows.
 - [study_clinical.md](examples/study_clinical.md) — `phs_accession` → participants + diagnoses + treatments + samples.
-- [files_for_study.md](examples/files_for_study.md) — List a study's files, the DRS `file_id`, and why there's no direct download.
+- [files_for_study.md](examples/files_for_study.md) — List a study's files, the DRS `file_id` / `drs_uri`, and why there's no direct download.
 - [paginate.md](examples/paginate.md) — `first`/`offset` loop for a full result set.
 
 ## References
 
 - [references/QUERIES.md](references/QUERIES.md) — Every query: arguments (required vs optional),
   returned type, notes. The endpoint catalogue.
+- [references/SEARCH.md](references/SEARCH.md) — The faceted-search family: `searchSubjects` and its
+  ~40 facet dimensions, `subjectCountBy*` vs `filterSubjectCountBy*` vs `donutCountBy*`, the
+  `*Overview` row queries, `GroupCount.subjects`. Load for any cohort/cross-study search.
 - [references/ENTITIES.md](references/ENTITIES.md) — Data model, `phs_accession` as the join key, the
   per-entity ID list and full field lists for Program/Study/Participant/Sample/Diagnosis/Treatment/
-  File, participant-vs-subject terminology. Load before scoping a per-study query.
+  File, subject-vs-participant terminology. Load before scoping a per-study query.
 - [references/PAGINATION.md](references/PAGINATION.md) — `first`/`offset`, the 10000 cap, the
   default-10 footgun, loop patterns.
-- [references/FILES.md](references/FILES.md) — File records, the DRS `file_id`, open vs controlled
-  access, dbGaP authorization, the Cancer Genomics Cloud (CGC) manifest workflow, why the API never
-  downloads.
+- [references/FILES.md](references/FILES.md) — File records, the DRS `file_id` / `drs_uri`, open vs
+  controlled access, dbGaP authorization, the Cancer Genomics Cloud (CGC) manifest workflow, why the
+  API never downloads.
 - [references/DISCOVERY.md](references/DISCOVERY.md) — Finding studies/programs, `globalSearch`,
   `study_data_types`, and how to decide GC vs a specialized commons.
 - [references/DATA-TYPES.md](references/DATA-TYPES.md) — The per-file/per-sample modality nodes
   (`genomic_info`, `proteomic`, `images`, `pdx`, `multiplex_microscopy`, `non_dicom*`, caNanoLab
   `characterizations`/`compositions`) and what each carries.
 
-The upstream GC documentation is preserved verbatim in
-[assets/api-documentation.md](assets/api-documentation.md).
-</content>
+Upstream specs are preserved verbatim in [assets/](assets/): `general-commons-schema.graphql` (the
+backend GraphQL schema — the authoritative API surface), `es-indices.yaml` (the Elasticsearch index
+definitions behind the faceted search) + `es-indices-legacy.yml` and `es-index-spec-context.md`,
+`query-fields.txt` (the full introspected query list), and `api-documentation.md` (the upstream prose doc).

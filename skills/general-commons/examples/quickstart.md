@@ -64,4 +64,3 @@ catch them; always inspect `errors` (the helper does). Common messages:
 There is no API key, token, or header — all GC metadata/search is open-access (see [../auth.yaml](../auth.yaml)).
 The API does **not** download data: controlled data needs dbGaP authorization and files are accessed on
 the Cancer Genomics Cloud (CGC) by Velsera. See [files_for_study.md](files_for_study.md).
-</content>

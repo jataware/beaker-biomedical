@@ -74,4 +74,3 @@ sub = gc('{ diagnoses(phs_accession:"%s" participant_ids:["01BR001","01BR008"] f
   Check the count before pulling.
 - There is no single "all clinical for a study" query (unlike PDC's `clinicalPerStudy`) — assemble it
   from `participants` + `diagnoses` + `treatments` + `samples` as above.
-</content>

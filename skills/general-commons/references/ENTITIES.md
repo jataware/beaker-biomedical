@@ -60,11 +60,17 @@ the same entity in another commons.
 
 ## "participant" vs "subject"
 
-The documented **Data Type Queries** use **`participant`** (`participants`, `participant_id`,
-`participantsCount`). The portal-facing **UI/transform queries** use **`subject`** (`searchSubjects`,
-`subjectOverview`, `subjectDetail`, `numberOfSubjects`, `samplesForSubjectId`). They refer to the same
-entity. Use the Data Type Queries (`participants`) for structured per-study pulls; reach for the
-`subject*` helpers only when you specifically want the portal's faceted search behavior.
+The **Data Type Queries** use **`participant`** (`participants`, `participant_id`, `participantsCount`).
+The **faceted-search** layer uses **`subject`** (`searchSubjects`, `subjectOverview`, `subjectDetail`,
+`numberOfSubjects`, `samplesForSubjectId`). They refer to the **same entity** — two views, not two
+datasets. Pick by task, not by preference:
+
+- **Faceted search (`subject*`)** — the cohort-builder: filter across studies by characteristic and get
+  facet counts. Start here when the user names a disease/trait rather than a study. See [SEARCH.md](SEARCH.md).
+- **Data Type Queries (`participant*`)** — structured records of a known study by `phs_accession`
+  (diagnoses, treatments, samples, files, sequencing/proteomic/imaging metadata).
+
+A typical flow chains them: `searchSubjects` → resolve `phs_accession`(s) → Data Type Queries.
 
 ## Full field lists (verified live)
 
@@ -102,4 +108,3 @@ file_mapping_level release_datetime is_supplementary_file phs_accession particip
 
 All values are returned as **String** (cast numbers/sizes yourself). Modality node fields are in
 [DATA-TYPES.md](DATA-TYPES.md).
-</content>

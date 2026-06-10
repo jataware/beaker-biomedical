@@ -1,0 +1,79 @@
+# General Commons GraphQL query catalogue — generated from live introspection of
+# https://general.datacommons.cancer.gov/v1/graphql/  ({ __schema { queryType { fields ... } } }}).
+# Format:  queryName(arg1, arg2, ...) -> ReturnType   ;  73 query fields total.
+# Two families: Bento ES faceted search (searchSubjects/*Overview/numberOf*) and Gen3-style
+# Data Type Queries (programs/studies/participants/diagnoses/... + *Count). See references/.
+
+schemaVersion() -> String
+schemaModelVersion() -> String
+numberOfStudies() -> Int
+numberOfSubjects() -> Int
+numberOfSamples() -> Int
+numberOfFiles() -> Int
+numberOfDiseaseSites() -> Int
+numberOfImages() -> Int
+numberOfProteomics() -> Int
+idsLists() -> IdsLists
+programDetail(program_name) -> ProgramDetail
+programList() -> [ProgramListEntry]
+studyDetail(phs_accession) -> StudyDetail
+studyList() -> [StudyInfo]
+subjectDetail(subject_id) -> SubjectDetail
+samplesForSubjectId(subject_id) -> [Sample]
+searchSubjects(subject_ids, accesses, acl, experimental_strategies, file_types, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, dois, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names) -> SearchResult
+subjectOverview(subject_ids, accesses, acl, experimental_strategies, file_types, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, dois, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names, order_by, sort_direction, first, offset) -> [SubjectOverview]
+protocolOverview(protocol_pk_id, protocol_name, protocol_type, doi, doi_url, acl, accesses, experimental_strategies, file_types, file_names, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, doi_urls, dois, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names, order_by, sort_direction, first, offset) -> [ProtocolOverview]
+sampleOverview(subject_ids, sample_ids, accesses, acl, experimental_strategies, file_types, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, dois, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names, order_by, sort_direction, first, offset) -> [SampleOverview]
+fileOverview(subject_ids, sample_ids, file_ids, accesses, acl, experimental_strategies, file_types, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, dois, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names, order_by, sort_direction, first, offset) -> [FileOverview]
+filesInList(subject_ids, sample_ids, file_ids, study_participant_ids, accesses, acl, experimental_strategies, file_types, sex, image_modality, instrument_models, is_tumor, library_layouts, library_selections, library_source_materials, library_source_molecules, library_strategies, number_of_study_participants, number_of_study_samples, phs_accession, platforms, primary_diagnoses, reference_genome_assemblies, sample_types, site, studies, study_data_types, analytical_fractions, instrument_makes, proteomic_design_descriptions, organ_or_tissue, tissue_fixative, imaging_assay_type, is_supplementary_file, protocol_names, protocol_types, publication_titles, publication_statuses, pub_ids, nanomaterial_entities, functionalizing_entities, characterization_types, characterization_names, order_by, sort_direction, first, offset) -> [FilesInList]
+fileIDsFromList(subject_ids, sample_ids, file_names, file_ids, study_participant_ids, protocol_pk_ids) -> [String]
+findSubjectIdsInList(subject_ids) -> [SubjectResult]
+globalSearch(input, first, offset) -> GlobalSearchResult
+programs(program_names, first, offset) -> [Program]
+studies(phs_accessions, study_names, study_acronyms, first, offset) -> [Study]
+participants(participant_ids, phs_accession, first, offset) -> [Participant]
+diagnoses(diagnosis_ids, phs_accession, participant_ids, first, offset) -> [Diagnosis]
+treatments(treatment_ids, phs_accession, participant_ids, first, offset) -> [Treatment]
+samples(sample_ids, phs_accession, participant_ids, first, offset) -> [Sample]
+files(file_ids, file_names, file_types, released_range_start, released_range_end, phs_accession, participant_ids, first, offset) -> [File]
+genomic_info(genomic_info_ids, phs_accession, file_ids, first, offset) -> [Genomic_Info]
+images(study_link_ids, phs_accession, file_ids, first, offset) -> [Image]
+multiplex_microscopies(multiplex_microscopy_ids, phs_accession, file_ids, first, offset) -> [MultiplexMicroscopy]
+non_dicomct_images(non_dicomct_images_ids, phs_accession, file_ids, first, offset) -> [NonDICOMCTimages]
+non_dicommr_images(non_dicommr_images_ids, phs_accession, file_ids, first, offset) -> [NonDICOMMRimages]
+non_dicom_pathology_images(non_dicom_pathology_images_ids, phs_accession, file_ids, first, offset) -> [NonDICOMpathologyImages]
+non_dicompet_images(non_dicompet_images_ids, phs_accession, file_ids, first, offset) -> [NonDICOMPETimages]
+non_dicom_radiology_all_modalities(non_dicom_radiology_all_modalities_ids, phs_accession, file_ids, first, offset) -> [NonDICOMradiologyAllModalities]
+proteomics(proteomic_info_ids, phs_accession, file_ids, first, offset) -> [Proteomic]
+pdx(pdx_ids, phs_accession, sample_ids, first, offset) -> [PDX]
+investigators(investigator_ids, phs_accession, first, offset) -> [Investigator]
+characterizations(characterization_ids, phs_accession, sample_ids, first, offset) -> [Characterization]
+publications(publication_ids, phs_accession, sample_ids, first, offset) -> [Publication]
+protocols(protocol_ids, phs_accession, file_ids, sample_ids, first, offset) -> [Protocol]
+compositions(composition_ids, phs_accession, sample_ids, first, offset) -> [Composition]
+consent_groups(consent_group_ids, phs_accession, first, offset) -> [ConsentGroup]
+version() -> Version
+programsCount() -> Int
+studiesCount() -> Int
+participantsCount(phs_accession) -> Int
+samplesCount(phs_accession) -> Int
+filesCount(phs_accession) -> Int
+diagnosesCount(phs_accession) -> Int
+treatmentsCount(phs_accession) -> Int
+imagesCount(phs_accession) -> Int
+genomicInfoCount(phs_accession) -> Int
+proteomicsCount(phs_accession) -> Int
+pdxCount(phs_accession) -> Int
+multiplexMicroscopiesCount(phs_accession) -> Int
+nonDICOMCTimagesCount(phs_accession) -> Int
+nonDICOMMRimagesCount(phs_accession) -> Int
+nonDICOMPETimagesCount(phs_accession) -> Int
+nonDICOMpathologyImagesCount(phs_accession) -> Int
+nonDICOMradiologyAllModalitiesCount(phs_accession) -> Int
+investigatorsCount(phs_accession) -> Int
+characterizationsCount(phs_accession) -> Int
+publicationsCount(phs_accession) -> Int
+protocolsCount(phs_accession) -> Int
+compositionsCount(phs_accession) -> Int
+consentGroupsCount(phs_accession) -> Int
+versionsCount() -> Int

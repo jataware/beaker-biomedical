@@ -30,9 +30,13 @@ Treat counts/names as illustrative — call it live for the current set.
 ```
 
 `study_data_types` (e.g. `["Genomics", "Proteomics"]`) and `study_access` (Open/Controlled) are the
-fields that tell you what a study actually holds. There is **no disease/tissue filter argument** on
-`studies` — to find studies by disease you either scan `studies` + inspect `study_description`, use
-`globalSearch`, or (for clinical detail) pull `diagnoses` per study and filter client-side.
+fields that tell you what a study actually holds. The `studies` query has **no disease/tissue filter
+argument** — to find studies by disease, the best path is the **faceted search**:
+`searchSubjects(primary_diagnoses: ["..."]) { subjectCountByPhsAccession { group subjects } }` returns
+the studies (by `phs_accession`) that contain that diagnosis and how many subjects each has, in one
+call (see [SEARCH.md](SEARCH.md)). Discover the valid `primary_diagnoses` values from
+`searchSubjects { subjectCountByPrimaryDiagnosis { group subjects } }`. Alternatives:
+`globalSearch(input: "...")`, or scanning `studies` + `study_description`.
 
 ## Programs
 
@@ -69,4 +73,3 @@ often is *also* (and better) served elsewhere. After discovery, look at `study_d
 
 This matches the skill's mandate: **for ambiguous requests prefer the more specific commons; fall back
 to GC only when warranted.**
-</content>

@@ -64,4 +64,3 @@ print("Access GC files via a CGC manifest workflow, not a direct download. See r
   metadata never needs auth, but downloading controlled data needs dbGaP authorization.
 - To learn a file's modality, join its `file_id` to `genomic_info` / `proteomics` / `images` /
   `multiplex_microscopies` / `non_dicom*` ([../references/DATA-TYPES.md](../references/DATA-TYPES.md)).
-</content>
