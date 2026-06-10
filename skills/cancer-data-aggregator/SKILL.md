@@ -15,8 +15,10 @@ description: >-
   data → `general-commons`), locate the data with CDA, then hand off to that commons' skill.
 compatibility: >-
   Python 3.9+ with the `cdapython` package (`pip install
-  git+https://github.com/CancerDataAggregator/cdapython.git@develop`), which depends on pandas. No API
-  key or auth required — all CDA metadata is open. The REST service
+  git+https://github.com/CancerDataAggregator/cdapython.git@develop`), which depends on pandas. As of
+  June 2026 that install resolves to **cdapython 2.1.0**, and its default endpoint is already the
+  production service (`get_api_url()` → `https://cda.datacommons.cancer.gov`), so `set_api_url` is
+  optional. No API key or auth required — all CDA metadata is open. The REST service
   (https://cda.datacommons.cancer.gov/) needs only `requests`. Actually downloading data files (via
   their DRS URIs) happens outside CDA in a cloud workspace, and controlled-access data still requires
   the user's dbGaP authorization there.
@@ -76,11 +78,14 @@ pip install git+https://github.com/CancerDataAggregator/cdapython.git@develop   
 
 ```python
 from cdapython import *
-set_api_url("https://cda.datacommons.cancer.gov/")   # production; trailing slash matters
+get_api_url()                                        # -> https://cda.datacommons.cancer.gov (already production in 2.1.0)
+set_api_url("https://cda.datacommons.cancer.gov/")   # optional; pins production explicitly
 ```
 
-`set_api_url()` points the client at an endpoint (the docs' notebooks use the `cda-dev.*` host for
-testing; use the production host above). See [examples/quickstart.md](examples/quickstart.md).
+In cdapython 2.1.0 the client **already defaults to production**, so `set_api_url()` is optional —
+call it only to be explicit or to point at a different host (the docs' notebooks sometimes use a
+`cda-dev.*` host for testing). The trailing slash does **not** matter (both forms work);
+`get_api_url()` shows the active endpoint. See [examples/quickstart.md](examples/quickstart.md).
 
 ## The core workflow
 
@@ -111,7 +116,8 @@ Worked end-to-end: [examples/find_cohort.md](examples/find_cohort.md).
 - **Discover before you filter — never guess a column or value name.** Names are *not* guessable. A
   guessed **column** that doesn't exist makes the query fail; a guessed **value** with the wrong
   spelling/casing silently returns the wrong rows (a 0 or off count that looks legitimate). There are
-  105 columns across 7 tables, each on a specific table — bad guesses like `gender` (the column is
+  64 searchable columns across 7 tables (cdapython `columns()`), each on a specific table — bad guesses
+  like `gender` (the column is
   `sex`), `tumor_stage` (it's `stage`), `cancer_type`/`disease` (it's `diagnosis`), or `patient_id`
   (it's `subject_id`) do not exist. **For any field you have not already confirmed this session, run
   `columns(...)` for the exact name (`columns(description='…')` finds it by concept) and
@@ -133,22 +139,48 @@ Worked end-to-end: [examples/find_cohort.md](examples/find_cohort.md).
 - **Filter strings need spaces around the operator:** `'age_at_observation > 50'`, never
   `'age_at_observation>50'`. Operators: `< <= > >= = !=`; `NULL` matches missing; chained ranges work
   (`'70 < age_at_observation <= 80'`). See [references/FILTERS.md](references/FILTERS.md).
+- **⚠️ `!=` is SILENTLY BROKEN on string/controlled-term columns — it returns the `=` set.** Verified
+  live: `race != White` → 33,613 (identical to `race = White`); same for `sex`, `vital_status`,
+  `diagnosis`, `format`, … The service drops the negation when compiling the controlled-term lookup.
+  `!=` works only on numeric columns (`year_of_birth != 1961` is correct). To exclude a *string* value,
+  enumerate the others with `match_any`, or use `'col = NULL'` logic — never trust `col != value`.
+- **Wildcards `*` only work at the START/END of a value.** A `*` in the middle (`'diagnosis =
+  Endo*carcinoma'`) is a hard error. And a positional `search_terms` arg with a **space is matched as a
+  whole phrase** (`summarize_subjects('lung adenocarcinoma')` errors with "yielded no results") — AND
+  separate words as separate args: `summarize_subjects('lung', 'adenocarcinoma')`.
+- **Most clinical columns are mostly NULL — equality filters silently drop the missing majority.**
+  Verified: `age_at_observation` 97.5% null, `stage` ~91%, `grade` ~95%, `vital_status` ~84%,
+  `treatment_anatomic_site` ~100% null. Profile with `'col = NULL'` before trusting a cohort size.
 - **`subject` and `file` are the two result entities.** Count subjects with subject queries and files
   with file queries — don't read the related-*file* total off a subject query (historically miscounted;
   use `summarize_files`/`get_file_data` for file counts).
-- **For cross-repository linkage use the `<table>_data_at_<dc>` booleans** (e.g.
-  `subject_data_at_pdc = true`) and the `data_source` Venn in summaries — *not* the `upstream_source`
-  field, which has a known record-linking bug. See [references/CROSS-REPOSITORY.md](references/CROSS-REPOSITORY.md).
-- **`add_columns` can multiply rows** (cross-table join fan-out). Use `collate_results=True` then
-  `expand_*_results()` to keep one logical entity per concept. See
-  [examples/intersect_cohorts.md](examples/intersect_cohorts.md).
+- **For cross-repository overlap in `cdapython`, use the `data_source=` argument — NOT the
+  `<table>_data_at_<dc>` booleans.** In cdapython 2.1.0 those booleans (and `<table>_data_source_count`)
+  are **not searchable** — `match_all=['subject_data_at_gdc = true']` raises *"not a searchable CDA
+  column."* Instead pass `data_source='GDC'` for one repo, or a **list for AND/intersection**:
+  `data_source=['GDC','PDC']` → subjects present at **both** (verified: 2,345). The boolean columns DO
+  work in the raw **REST** `MATCH_ALL` (`subject_data_at_gdc = true` AND `subject_data_at_pdc = true` →
+  2,345) — they're a REST-only feature. Read the cross-repo Venn from the `data_source` summary, and the
+  per-row `data_source` list column on result rows; avoid the `upstream_source` field (known
+  record-linking bug). **Overlap is a *subject* concept — files are single-homed** (`file_data_source_count
+  > 1` = 0). See [references/CROSS-REPOSITORY.md](references/CROSS-REPOSITORY.md).
+- **`add_columns` packs per-entity *lists* into cells — and they are NOT row-aligned. Never zip them.**
+  It does *not* fan rows out (one subject stays one row). Each added column becomes a list, but the lists
+  from different columns are **independently de-duplicated**, so they have different lengths — verified:
+  one subject came back with 297 `file_id`s but only 16 `format`s. Zipping `file_id`↔`format` (or
+  `upstream_source`↔`upstream_id`, or any `mutation.*` columns) pairs the wrong values. To get aligned,
+  one-row-per-item data you **must** pass `collate_results=True` (yields a nested, row-aligned
+  `<table>_data` frame) then `expand_*_results()`. See [examples/intersect_cohorts.md](examples/intersect_cohorts.md).
 
 ## Data model — 7 tables
 
 `subject` · `file` · `observation` (clinical: diagnosis, sex, age, stage, morphology…) · `project` ·
-`treatment` · `mutation` (GDC-derived; counts unreliable — see ref) · `upstream_identifiers`. Every
-table carries `<table>_data_at_{gc,gdc,icdc,idc,pdc}` booleans and a `<table>_data_source_count`. Full
-column lists and relationships: [references/DATA-MODEL.md](references/DATA-MODEL.md).
+`treatment` · `mutation` (GDC-derived; counts unreliable — see ref) · `upstream_identifiers`.
+`cdapython` `columns()` exposes **64 searchable columns**; the REST `/columns/` catalogue lists **105**
+— the extra 41 are each table's `<table>_data_at_{gc,gdc,icdc,idc,pdc}` booleans,
+`<table>_data_source_count`, and `<table>_crdc_id`/`_id_alias`, which are filterable **only at REST**
+(in `cdapython` use `data_source=` instead). Full column lists and relationships:
+[references/DATA-MODEL.md](references/DATA-MODEL.md).
 
 ## cdapython functions
 
@@ -160,13 +192,15 @@ column lists and relationships: [references/DATA-MODEL.md](references/DATA-MODEL
 | `summarize_subjects(...)` / `summarize_files(...)` | Count-profile a result set (incl. cross-DC breakdown) |
 | `get_subject_data(...)` / `get_file_data(...)` | Fetch matching rows (one per subject / file) |
 | `intersect_subject_results(a, b, …)` / `intersect_file_results(...)` | AND two result sets (shared entities) |
-| `expand_subject_results(df, '<col>_data')` | Explode a collated nested column to one row per item |
-| `set_api_url(url)` · `cda_functions()` | Point at an endpoint · list all functions |
+| `expand_subject_results(df, '<col>_data')` / `expand_file_results(...)` | Explode a collated nested column to one row per item |
+| `release_metadata()` | Per table/column/source release versions, extraction dates, row counts (the freshness/provenance source) |
+| `set_api_url(url)` · `get_api_url()` · `cda_functions()` | Point at / read the active endpoint · list all functions |
 
 Shared search arguments (most functions): positional `search_terms` (global keyword, case-insensitive,
 AND'd), `match_all=[...]` (AND filter strings), `match_any=[...]` (OR), `match_from_file={...}` (match a
-CDA column against a column in a local TSV), `data_source=` (`'GDC'`,`'IDC'`,`'PDC'`,`'GC'`,`'ICDC'`),
-`add_columns='table.*'`, `exclude_columns`, `collate_results`, `return_data_as`, `output_file`. Full
+CDA column against a column in a local TSV), `data_source=` (`'GDC'`,`'IDC'`,`'PDC'`,`'GC'`,`'ICDC'`;
+a **list ANDs** — entities present at *all* listed repos), `add_columns='table.*'`, `exclude_columns`,
+`collate_results`, `return_data_as`, `output_file`. Full
 signatures and return shapes: [references/FUNCTIONS.md](references/FUNCTIONS.md).
 
 ## REST service
@@ -179,12 +213,17 @@ caveat above. See [references/REST-API.md](references/REST-API.md) and [examples
 
 ## Example usage
 
-Smallest useful query — what's in the current release, no auth:
+Smallest useful query — what's in the current release, no auth (cdapython has a `release_metadata()`
+function; the REST endpoint returns the same data):
 
 ```python
+from cdapython import release_metadata
+release_metadata()[0]   # e.g. {'cda_table':'file','cda_column':'access','data_source':'CDA',
+                        #        'data_source_version':'March 2026','data_source_extraction_date':'2026-03-25', ...}
+
+# REST equivalent (no Python install beyond requests):
 import requests
-r = requests.get("https://cda.datacommons.cancer.gov/release_metadata/")
-print(r.json()["result"][0])   # per-table/column/source row counts + version + extraction date
+requests.get("https://cda.datacommons.cancer.gov/release_metadata/").json()["result"][0]
 ```
 
 Worked examples in [examples/](examples/):
@@ -193,13 +232,16 @@ Worked examples in [examples/](examples/):
 - [find_cohort.md](examples/find_cohort.md) — `columns` → `column_values` → `summarize` → `get` for a
   clinical cohort (adenocarcinoma by age).
 - [cross_repository.md](examples/cross_repository.md) — compile CPTAC across commons; find which data
-  centers hold a cohort; the `data_at_*` booleans and `data_source` Venn.
+  centers hold a cohort; the `data_source=` list (AND) and the `data_source` Venn.
 - [intersect_cohorts.md](examples/intersect_cohorts.md) — matched tumor+normal BAMs; CT-image + mutation
   subjects; `intersect_*` + `collate_results` + `expand_*`.
 - [files_and_drs.md](examples/files_and_drs.md) — `get_file_data` → `drs_uri` → manifest → cloud handoff
   (why there's no direct download).
 - [handoff_to_gdc.md](examples/handoff_to_gdc.md) — tested CDA→GDC handoffs (proteogenomics, BAM slicing,
   mutation frequency): the verified `subject_id`/`file_id`→GDC keys and why each crosses to `genomic-data-commons`.
+- [query_patterns.md](examples/query_patterns.md) — verified extra idioms: `match_any` OR,
+  `search_terms` keyword, `treatment`/gene columns (`force=True`), `NULL` coverage, canine/ICDC and GC
+  sources, CPTAC compile, and REST pagination + typed errors.
 - [rest_api.md](examples/rest_api.md) — raw REST calls, pagination via `next_url`, and the
   wildcard/exact-match gotcha.
 
@@ -207,18 +249,22 @@ Worked examples in [examples/](examples/):
 
 - [references/FUNCTIONS.md](references/FUNCTIONS.md) — every `cdapython` function: signatures,
   arguments, return shapes, `return_data_as` options. Load when composing or debugging a call.
-- [references/DATA-MODEL.md](references/DATA-MODEL.md) — the 7 tables, all 105 columns, the cross-DC
-  boolean columns, and how subject/observation/file/project/treatment/mutation relate. Load before
-  choosing columns.
+- [references/DATA-MODEL.md](references/DATA-MODEL.md) — the 7 tables, the 64 cdapython-searchable
+  columns (vs 105 at REST), the cross-DC linkage columns, and how
+  subject/observation/file/project/treatment/mutation relate. Load before choosing columns.
 - [references/FILTERS.md](references/FILTERS.md) — search styles (`search_terms` vs `match_all`/`match_any`),
   filter-string grammar, wildcards, `NULL`, ranges, `data_source`, `match_from_file`. Load when building filters.
-- [references/CROSS-REPOSITORY.md](references/CROSS-REPOSITORY.md) — the flagship: `data_at_*` booleans,
-  `data_source_count`, the summary Venn, `intersect_*`, `upstream_identifiers`, and routing/handoff to
-  specialized commons. Load for any "across repositories" task.
+- [references/CROSS-REPOSITORY.md](references/CROSS-REPOSITORY.md) — the flagship: cdapython
+  `data_source=` (list = AND) vs the REST-only `data_at_*` booleans, the per-row `data_source` column,
+  the summary Venn (and its differing key formats), `intersect_*`, `upstream_identifiers`, and
+  routing/handoff to specialized commons. Load for any "across repositories" task.
 - [references/REST-API.md](references/REST-API.md) — the 7 endpoints, request/response schemas,
   pagination, and where REST semantics differ from `cdapython`. Load for raw HTTP use.
 - [references/DISCOVERY.md](references/DISCOVERY.md) — the `tables`→`columns`→`column_values` discovery
   loop and `release_metadata`. Load when you don't yet know the right column or value.
+- [references/TROUBLESHOOTING.md](references/TROUBLESHOOTING.md) — verified fixes for the common failure
+  modes ("not a searchable CDA column", `summarize_*` returning `None`, `*` wildcards at REST, files
+  single-homed, casing). Load when a query errors or a count looks wrong.
 
 Upstream specs preserved verbatim in [assets/](assets/): `service_openapi.yaml` (REST OpenAPI),
 `cdapython_man_pages.md` (the cdapython function docs).

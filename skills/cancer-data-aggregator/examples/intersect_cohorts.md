@@ -45,11 +45,13 @@ both = intersect_subject_results(ct, mut)        # kidney subjects with BOTH an 
 expand_subject_results(both, 'file_data')        # one row per file: drs_uri/file_id/access aligned
 ```
 
-Why collate + expand: `add_columns='file.*'` without `collate_results=True` fans each subject out into
-one row per file and you can't tell which `file_id` is the CT vs the mutation file. `collate_results`
-bundles the joined file rows into a nested `file_data` column; `expand_subject_results(df, 'file_data')`
-then lays them out one-per-row with values aligned. (`add_columns='observation.*'` collates into
-`observation_data`; the pattern is `<table>_data`.)
+Why collate + expand: `add_columns='file.*'` **without** `collate_results=True` keeps one row per
+subject but packs each file column into a list cell — and those lists are **independently de-duplicated,
+so they're different lengths and not aligned** (e.g. 297 `file_id`s but 16 `format`s). You cannot tell
+which `file_id` is the CT vs the mutation file, and zipping the columns pairs the wrong values.
+`collate_results=True` bundles the joined file rows into a nested, **row-aligned** `file_data` frame;
+`expand_subject_results(df, 'file_data')` then lays them out one-per-row with values aligned.
+(`add_columns='observation.*'` collates into `observation_data`; the pattern is `<table>_data`.)
 
 ## How intersect works
 
@@ -58,9 +60,21 @@ then lays them out one-per-row with values aligned. (`add_columns='observation.*
 - If two inputs carry added columns from different upstream queries that won't reconcile, pass
   `ignore_added_columns=True` to merge just the base subject/file columns.
 - It's an AND. For OR, put the alternatives in one query's `match_any` instead.
+- **`intersect_file_results` can fail (2.1.0)** with *"clashing values … column 'data_source'"* when the
+  inputs collated the base `data_source` list differently — and `ignore_added_columns=True` does **not**
+  fix it (it's a base column). Fall back to a plain id intersection:
+  `shared = set(a['file_id']) & set(b['file_id']); both = a[a['file_id'].isin(shared)]`. Prefer
+  expressing the AND at the **subject** level (`intersect_subject_results`, which is reliable) and then
+  pulling the files.
 
 ## Notes
 
+- **Imaging caveat:** `tumor_vs_normal` is **null for IDC imaging files** (it returns `[]`) — the
+  tumor/normal pattern is a sequencing (GDC BAM) concept, not imaging. IDC subjects also have sparse
+  demographics (race/ethnicity ~80% null, cause_of_death ~99% null); those values come from the linked
+  GDC/PDC records. The verified kidney cross-modal cohort: `file_type = CT Image Storage` (550 subjects)
+  ∩ `file_type = Annotated Somatic Mutation` (311) → **64 subjects**, expanding to 1,373 file rows
+  whose `data_source`/`access` correctly differ per row (CT=IDC/open, mutation=GDC/controlled).
 - Confirm value casing first (`format` UPPERCASE, `sex` lowercase, `file_type` title-case phrases);
   wildcards (`*kidney`) need `cdapython`, not raw REST.
 - This locates and assembles the cohort + its `drs_uri`s — resolve/download in a cloud workspace

@@ -14,9 +14,9 @@ set_api_url("https://cda.datacommons.cancer.gov/")
 
 ```python
 files = get_file_data(match_all=['project_name = *cptac*', 'format = BAM'])
-files[['file_id', 'file_name', 'drs_uri', 'access', 'size', 'file_data_at_gdc',
-       'file_data_at_pdc']].head()
+files[['file_id', 'file_name', 'drs_uri', 'access', 'size', 'data_source']].head()
 # drs_uri is a GA4GH DRS identifier (e.g. drs://...), NOT a direct download link.
+# `data_source` is the per-row repository list (files are single-homed, so it's a 1-element list, e.g. ['GDC']).
 ```
 
 Size the set and check open vs controlled before committing to a pull:
@@ -62,7 +62,13 @@ controlled-access download via its own token flow).
 - **`size` is in bytes** (a `bigint`); sum it to estimate egress/storage before resolving a manifest.
 - **`access`** is `open` or `controlled`; searching metadata never needs auth, only resolving
   controlled bytes does (dbGaP, in the cloud workspace).
-- The `file_data_at_<dc>` booleans tell you which repository each file physically lives in — useful for
-  choosing the right cloud resource.
+- The per-row **`data_source`** column tells you which repository each file physically lives in (a
+  1-element list, since files are single-homed) — useful for choosing the right cloud resource. (The
+  `file_data_at_<dc>` booleans exist only in the REST catalogue, not in cdapython results.)
 - CDA's `drs_uri` may be empty for some records; fall back to `file_id` / `file_crdc_id` +
   `upstream_identifiers.*` to chase the file in its home repository.
+- **IDC (imaging) files differ from GDC.** An IDC file's `drs_uri` is a **comma-separated list** of many
+  `drs://dg.4dfc:<uuid>` objects (one CDA "file" = one DICOM series = ~hundreds of instances; verified:
+  174 URIs in one CT row) — split on `,` before resolving, unlike a GDC BAM whose `drs_uri` is a single
+  URI equal to `file_id`. IDC is **100% `open` / `format = DICOM`** (994,073 files, all open), so imaging
+  needs no dbGaP step — whereas GDC is majority `controlled`. ICDC files are also all `open`.

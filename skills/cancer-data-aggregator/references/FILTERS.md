@@ -15,6 +15,12 @@ get_file_data('kidney', 'adeno*')        # wildcards allowed
 Best for open-ended exploration ("what's in here about kidney?"). Once you know the column, switch to
 explicit filters for precision.
 
+> **One arg = one whole phrase, not AND-of-words.** AND happens only across *separate* args.
+> `summarize_subjects('lung adenocarcinoma')` matches the literal phrase and errors with *"yielded no
+> results"*; you want `summarize_subjects('lung', 'adenocarcinoma')` → 3,722. Wildcards work in terms
+> (`'adeno*'`), matching is case-insensitive, and terms search **all** columns (so `'Adenocarcinoma'` →
+> 11,835 ≥ `diagnosis = Adenocarcinoma` → 11,794, picking up hits in `morphology` etc.).
+
 ## 2. Filter strings (`match_all` / `match_any`)
 
 A filter string is `'COLUMN OP VALUE'`. **The spaces around `OP` are required** — `'sex = female'`
@@ -35,8 +41,16 @@ summarize_files(match_all=['project_name = *cptac*'],
 
 | Operator | Works on | Notes |
 |---|---|---|
-| `=`  `!=` | numeric, boolean, string | string match is **case-insensitive** |
+| `=` | numeric, string | string match is **case-insensitive** |
+| `!=` | **numeric only** | ⚠️ **broken on string columns — silently returns the `=` set** (see below) |
 | `<`  `<=`  `>`  `>=` | numeric only | |
+
+> **⚠️ `!=` does not negate string/controlled-term columns.** Verified live: `race != White` → 33,613,
+> exactly equal to `race = White`; likewise `sex != male` (77,125 = `sex = male`), `vital_status != dead`,
+> `format != BAM`. The service compiles `!=` on a controlled-term column to the **same SQL as `=`** (the
+> negation is dropped). It works only on plain numerics — `year_of_birth != 1961` → 5,561 (correctly
+> = present − equal, also excluding NULLs). **To exclude a string value**, enumerate the alternatives
+> with `match_any`, or filter `'col = NULL'` — do not write `col != value` for a string.
 
 Chained numeric ranges are allowed in a single filter string:
 
@@ -47,7 +61,15 @@ summarize_subjects(match_all=['70 < age_at_observation <= 80', 'species = human'
 ### `NULL` — matching missing data
 
 `NULL` is the special value for "no data". `'cause_of_death = NULL'` matches subjects missing a cause
-of death; `'age_at_observation != NULL'` requires the field be present.
+of death; `'age_at_observation != NULL'` requires the field be present. (`!= NULL` works even though
+`!=` is broken for ordinary string *values* — it's a distinct code path.)
+
+> **Most clinical columns are mostly NULL — an equality filter silently excludes the missing majority.**
+> Verified via `release_metadata` (CDA aggregate, March 2026): `treatment_anatomic_site` **100% null**
+> (always 0 rows), `age_at_observation` **97.5%** (only 4,649 of 182,465 subjects have any age),
+> `year_of_death` 99.3%, `year_of_birth` 96.9%, `cause_of_death` 99.0%, `grade` 95.5%, `stage` 93.5%,
+> `vital_status` 87.6%, `morphology` 82.1%, `ethnicity` 80.6%, `race` 76.8%, `diagnosis` 68.6%. Always
+> `'col = NULL'`-profile a clinical column before trusting a cohort count built on it.
 
 ### Wildcards `*` — **a `cdapython` client feature**
 
@@ -58,6 +80,10 @@ In `cdapython`, `*` on either/both ends of a string VALUE enables partial matchi
 'anatomic_site = *kidney'        # ends with "kidney"
 'sex = F*'                       # starts with F
 ```
+
+> **`*` is allowed only at the START and/or END of a value — never the middle.** `'diagnosis =
+> Endo*carcinoma'` is a hard error (*"Wildcards are only allowed at the ends of string values"*), even
+> though `Endometrioid adenocarcinoma` exists. Use leading/trailing `*` only (one or both ends).
 
 > **The `*` wildcard is implemented in the client, not the service.** A raw REST `MATCH_ALL` does
 > exact-match only (case-insensitive) and does **not** expand `*` (or SQL `%`). Verified against the
@@ -74,9 +100,22 @@ before composing exact filters:
 |---|---|---|
 | `sex` | lowercase | `female`, `male` |
 | `species` | lowercase | `human`, `mouse`, `dog`, `human/mouse xenograft` |
-| `format` | UPPERCASE | `BAM`, `BAI`, `VCF`, `BCR XML` |
-| `diagnosis` | title-case | `Adenocarcinoma`, `Endometrioid adenocarcinoma` |
-| `file_type` | title-case phrases | `CT Image Storage`, `Annotated Somatic Mutation` |
+| `vital_status` | lowercase | `alive`, `dead` (NOT `Dead`/`Deceased`) |
+| `observed_anatomic_site` / `resection_anatomic_site` | lowercase | `chest`, `breast`, `lung`, `kidney`, `blood` |
+| `format` | UPPERCASE | `BAM`, `BAI`, `VCF`, `BCR XML` (and many `BCR …` variants) |
+| `diagnosis` | title-case | `Adenocarcinoma`, `Endometrioid adenocarcinoma`, `Neoplasm, malignant` |
+| `morphology` | title-case **text** (NOT ICD-O codes) | `Adenocarcinoma`, `Infiltrating duct carcinoma`, `Squamous cell carcinoma` |
+| `stage` | title-case + roman | `Stage I`, `Stage IIA`, `Stage III`, `Stage IV` |
+| `grade` | title-case + G-suffix | `High Grade G3`, `Intermediate Grade G2`, `Low Grade G1`, `Anaplastic` |
+| `race` | title-case | `White`, `Asian`, `Black or African American`, `American Indian or Alaska Native` |
+| `ethnicity` | title-case | `Non-Hispanic`, `Hispanic or Latino` (NOT GDC's `not hispanic or latino` → 0) |
+| `file_type` | title-case phrases | `CT Image Storage`, `Annotated Somatic Mutation`, `Aligned Reads` (BAMs) |
+
+> **Don't assume GDC/other-repo vocabularies.** CDA harmonizes to its own value set, so a guessed value
+> in another repo's spelling silently returns 0 — e.g. `ethnicity = not hispanic or latino` → 0 (it's
+> `Non-Hispanic`), and `vital_status`/`morphology` differ from raw GDC too. Run `column_values('col')`
+> first. (Exact matching is case-insensitive, so `vital_status = Dead` still returns the `dead` rows —
+> but the *stored* value is lowercase `dead`; print it that way.)
 
 Exact string matching is case-insensitive (`'diagnosis = adenocarcinoma'` == `'... = Adenocarcinoma'`),
 but **partial** matching needs the `*` wildcard, so spelling still matters: `'diagnosis =
@@ -86,16 +125,21 @@ matches only the exact term.
 ## 3. Restrict by repository (`data_source`)
 
 `data_source=` keeps only rows with data at the named upstream repository (`'GDC'`, `'IDC'`, `'PDC'`,
-`'GC'`, `'ICDC'`; string or list):
+`'GC'`, `'ICDC'`). A **single** value keeps entities at that repo; a **list ANDs** — kept only if
+present at *every* listed repo (intersection):
 
 ```python
 summarize_subjects(data_source='GDC')              # subjects with GDC data (+ cross-DC Venn in output)
-get_file_data(match_all=['format = BAM'], data_source=['GDC', 'PDC'])
+summarize_subjects(data_source=['GDC', 'PDC'])     # subjects at BOTH GDC and PDC (verified: 2,345)
+get_file_data(match_all=['format = BAM'], data_source='GDC')   # GDC BAMs (files are single-homed —
+                                                               # a data_source list AND would give 0)
 ```
 
-For *boolean* "has data at X" filters inside `match_all`, use the columns directly —
-`'subject_data_at_pdc = true'` — which also lets you express overlap (`subject_data_at_gdc = true` AND
-`subject_data_at_pdc = true`). See [CROSS-REPOSITORY.md](CROSS-REPOSITORY.md).
+> **Don't filter on the `<table>_data_at_<dc>` booleans in `cdapython`** — they aren't searchable there
+> (`match_all=['subject_data_at_pdc = true']` raises *"not a searchable CDA column"*). Use `data_source=`
+> as above. The booleans *do* work in raw **REST** `MATCH_ALL` (the REST way to express
+> `subject_data_at_gdc = true` AND `subject_data_at_pdc = true`). See
+> [CROSS-REPOSITORY.md](CROSS-REPOSITORY.md).
 
 ## 4. Match against a local file (`match_from_file`)
 

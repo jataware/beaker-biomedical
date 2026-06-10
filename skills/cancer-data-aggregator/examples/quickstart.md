@@ -12,7 +12,8 @@ pip install git+https://github.com/CancerDataAggregator/cdapython.git@develop   
 
 ```python
 from cdapython import *
-set_api_url("https://cda.datacommons.cancer.gov/")   # production; trailing slash matters
+get_api_url()      # -> https://cda.datacommons.cancer.gov  (cdapython 2.1.0 already defaults to production)
+# set_api_url("https://cda.datacommons.cancer.gov/")   # optional; trailing slash doesn't matter
 
 cda_functions()    # list available functions for your installed version
 tables()           # subject, file, observation, project, treatment, mutation, upstream_identifiers

@@ -14,7 +14,9 @@ tables()   # subject, file, observation, project, treatment, mutation, upstream_
 
 ## 2. `columns(...)` — find the column (don't guess)
 
-There are 105 columns. Search them by name, table, or description rather than inventing one:
+`columns()` exposes **64 searchable columns** in cdapython (the REST `/columns/` catalogue lists 105,
+the extra 41 being REST-only linkage/key columns — see [DATA-MODEL.md](DATA-MODEL.md)). Search them by
+name, table, or description rather than inventing one:
 
 ```python
 columns(column=['*project*'])      # columns whose name contains "project"
@@ -24,7 +26,12 @@ columns(table='observation', data_type='text')
 ```
 
 Each row gives `table`, `column`, `data_type`, `nullable`, `description`. A typical discovery: "I want
-patient age" → `columns(description='age')` → `age_at_observation` (on `observation`, in years).
+patient age" → `columns(description='age')` → pick `age_at_observation` (on `observation`, in years).
+
+> **`description=` is a substring match — expect noise, scan the results.** `columns(description='age')`
+> also returns `file_type` (its description says "CT **im­age**"), `year_of_observation`, `year_of_birth`,
+> `year_of_death`, and `subject_id`. It narrows the field; it does not hand you one answer. Read the
+> matched `description`s and choose.
 
 ## 3. `column_values('col')` — see the real values & their casing
 
@@ -41,14 +48,18 @@ column_values('diagnosis', data_source='GDC') # values, restricted to one reposi
 - `filters=` accepts wildcards; `''` matches and counts NULLs.
 - Counts are **per row in the column's home table** — `column_values('diagnosis')` counts observations,
   so a value's count can exceed the number of distinct subjects with it.
-- ID-like columns are flagged as high-overhead; pass `force=True` to run them anyway.
+- **High-cardinality columns are blocked by default** — gene/ID-like columns (`hugo_symbol`,
+  `entrez_gene_id`, the `*_id`/`*_barcode`/`*_uuid` columns) return a *warning instead of data*. Pass
+  **`force=True`** to run them. **A `filters=` restriction does NOT bypass the block** — verified:
+  `column_values('hugo_symbol', filters='TP53')` is blocked, `column_values('hugo_symbol',
+  filters='TP53', force=True)` → `['TP53']`.
 - `column_values` accepts **one** `data_source` per call.
 
 ## Worked discovery → query
 
 ```python
 # "Adenocarcinoma patients over 60" — discover, then filter.
-columns(description='age')                              # -> age_at_observation (years, observation)
+columns(description='age')                              # several hits; pick age_at_observation (years, observation)
 column_values('diagnosis', filters='*denocarcinoma*')  # -> "Adenocarcinoma", "Endometrioid adenocarcinoma", ...
 summarize_subjects(match_all=['diagnosis = *adenocarcinoma*',  # * = client partial match
                               'age_at_observation > 60', 'species = human'])
@@ -67,6 +78,17 @@ meta = requests.get("https://cda.datacommons.cancer.gov/release_metadata/").json
 #             data_source_extraction_date, data_source_row_count, ...
 ```
 
-Sources reported: `CDA` (the harmonized aggregate) plus the five upstreams — `GDC`, `PDC`, `IDC`, `GC`,
-`ICDC` — each with its own version (e.g. GDC "Data Release 45.0", PDC "5.3", IDC "v23", GC "23.0") and
-extraction date. This is the authoritative "how current is CDA?" answer; cite it rather than guessing.
+`release_metadata()` returns **151 records** (one per table/column/source). Sources reported: `CDA` (the
+harmonized aggregate) plus the five upstreams — `GDC`, `PDC`, `IDC`, `GC`, `ICDC` (no `CDS` anymore) —
+each with its own `data_source_version` and extraction date. Current (March 2026 release, verified live):
+
+| source | data_source_version | extraction |
+|---|---|---|
+| CDA | `March 2026` | 2026-03-25 |
+| GDC | `Data Release 45.0 - December 04, 2025` | 2026-03-02 |
+| PDC | `Data Release 5.3` | 2026-03-02 |
+| IDC | `v23` | 2025-11-26 |
+| GC | `23.0` | 2026-02-17 |
+| ICDC | `2025-09-01` | 2026-03-03 |
+
+This is the authoritative "how current is CDA?" answer; cite it rather than guessing.
