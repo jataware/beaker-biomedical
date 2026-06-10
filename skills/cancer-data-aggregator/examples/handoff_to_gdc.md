@@ -20,8 +20,10 @@ CDA emits identifiers that resolve directly in the GDC API:
 | `subject_id` | strip the `PROGRAM.` prefix | `cases.submitter_id` | `CPTAC.C3L-03728` → `C3L-03728` → project `CPTAC-3` |
 | `file_id` (= UUID in `drs://dg.4dfc:<uuid>`) | use as-is | GDC file UUID | `00000073-27e1-4dcd-bfdc-e458c31feec2` → `TCGA-BRCA` RNA-Seq BAM |
 
-The robust, documented way to get the GDC id in `cdapython` is the crosswalk join
-`add_columns='upstream_identifiers.*'` (yields `upstream_source='GDC'`, `upstream_id=<gdc id>`); the
+The robust way to get the GDC id in `cdapython` is the crosswalk join
+`add_columns='upstream_identifiers.*'` **with `collate_results=True`** — read the aligned
+`upstream_identifiers_data` frame (`upstream_source='GDC'`, `upstream_id=<gdc id>`). Don't read the flat
+un-collated columns: they're de-duplicated and unaligned, so zipping mis-pairs source and id. The
 `PROGRAM.<submitter_id>` convention above is the quick shortcut. See
 [../references/CROSS-REPOSITORY.md](../references/CROSS-REPOSITORY.md).
 
@@ -39,11 +41,14 @@ The robust, documented way to get the GDC id in `cdapython` is the crosswalk joi
 from cdapython import *
 set_api_url("https://cda.datacommons.cancer.gov/")
 
-summarize_subjects(match_all=['subject_data_at_gdc = true', 'subject_data_at_pdc = true'])
+summarize_subjects(data_source=['GDC', 'PDC'])   # a list ANDs -> present at BOTH repos
 #   number_of_matching_subjects: 2345
 
-cohort = get_subject_data(match_all=['subject_data_at_gdc = true', 'subject_data_at_pdc = true'],
-                          add_columns='upstream_identifiers.*')   # -> per-subject GDC ids
+cohort = get_subject_data(data_source=['GDC', 'PDC'],
+                          add_columns='upstream_identifiers.*',
+                          collate_results=True)   # collate REQUIRED: the flat upstream_* lists are
+                                                  # de-duplicated & unaligned — read the nested
+                                                  # `upstream_identifiers_data` frame for aligned (source,id)
 # subject_id values look like: CPTAC.C3L-03728, TCGA.TCGA-23-1123, APOLLO.AP-LU5F, ...
 ```
 
@@ -83,8 +88,7 @@ Locate the BAMs in CDA (verified: 197,324 BAM files are GDC-resident; they come 
 that **is** the GDC UUID, plus `access`):
 
 ```python
-bams = get_file_data(match_all=['file_data_at_gdc = true', 'format = BAM'],
-                     data_source='GDC')
+bams = get_file_data(match_all=['format = BAM'], data_source='GDC')   # data_source= scopes to GDC
 # rows: file_id=00000073-27e1-4dcd-bfdc-e458c31feec2,
 #       drs_uri=drs://dg.4dfc:00000073-...,  access=controlled,  file_type=Aligned Reads
 ```

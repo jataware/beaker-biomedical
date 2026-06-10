@@ -32,7 +32,8 @@ catalogue queries. **Mind the semantic differences below** — REST is not a 1:1
   "SEARCH_LIST":     ["kidney"],                  // positional global keyword terms (AND'd)
   "MATCH_ALL":       ["species = human"],         // filter strings, all must hold
   "MATCH_SOME":      ["anatomic_site = kidney"],  // filter strings, at least one (== match_any)
-  "ADD_COLUMNS":     ["observation"],             // join other tables
+  "ADD_COLUMNS":     ["observation.*"],           // join other tables — the `.*` is REQUIRED
+                                                  //   (bare "observation"/"mutation" -> 400 ColumnNotFound)
   "EXCLUDE_COLUMNS": [],
   "COLLATE_RESULTS":   false,                     // DataRequestBody only
   "EXTERNAL_REFERENCE": false                     // DataRequestBody only (subjects)
@@ -40,8 +41,13 @@ catalogue queries. **Mind the semantic differences below** — REST is not a 1:1
 ```
 
 All fields are optional and default to empty. There is no `data_source` field in the body — restrict by
-source either with the boolean columns in `MATCH_ALL` (`subject_data_at_gdc = true`) or, for
-`column_values`, the `?data_source=` query parameter.
+source with the boolean columns in `MATCH_ALL` (`subject_data_at_gdc = true`; AND two of them for the
+overlap) or, for `column_values`, the `?data_source=` query parameter. **These `<table>_data_at_<dc>`
+booleans (and `<table>_data_source_count`) are a REST capability** — `cdapython` cannot filter on them
+and uses its `data_source=` argument instead (see [FILTERS.md](FILTERS.md),
+[CROSS-REPOSITORY.md](CROSS-REPOSITORY.md)). A `subject_*` boolean is valid in a `file` query (e.g. BAM
+files whose subject also has PDC data → 23,044), but `file_data_at_pdc` is ~0 since files are
+single-homed.
 
 ## Response shapes
 
@@ -57,12 +63,21 @@ source either with the boolean columns in `MATCH_ALL` (`subject_data_at_gdc = tr
 ```
 
 `SummaryResponseObj` has `result` + `query_sql` (no paging). Its single result object holds
-`total_count`, `file_count`, a `data_source` Venn, and one `<column>_summary` per profiled column.
+`total_count`; a cross-entity count that **differs by endpoint** — `file_count` on `/summary/subject`
+but **`subject_count` on `/summary/file`** (not `file_count`); a `data_source` Venn dict (31
+exclusive-combination keys); and one `<column>_summary` per profiled column, each a list of `{<column>:
+value, count_result: N}`. **Exception:** the `*_data_source_count_summary` entries are a single numeric
+stats object `{min, max, mean, median, lower_quartile, upper_quartile}`, not a value-count list — don't
+iterate them as `{value, count_result}`. (cdapython's `summarize_*(return_data_as='dict')` uses
+different key names: `number_of_matching_subjects`/`number_of_files_related_to_matching_subjects` and
+bare column names, not `*_summary`.)
 `ReleaseMetadataObj` / `ColumnResponseObj` carry just `result`.
 
 ## Pagination
 
-`/data/*` pages with `limit` + `offset`; loop until `next_url` is null (or `offset ≥ total_row_count`):
+`/data/*` **and** `/column_values/{column}` page with `limit` + `offset` (both return `total_row_count`
++ `next_url`); loop until `next_url` is null (or `offset ≥ total_row_count`). Note `next_url` may come
+back with an **`http://`** scheme — upgrade it to `https://` if your client enforces TLS.
 
 ```python
 import requests

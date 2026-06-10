@@ -12,7 +12,8 @@ set_api_url("https://cda.datacommons.cancer.gov/")
 ## 1. Find the columns
 
 ```python
-columns(description='age')        # -> age_at_observation (integer, years, on `observation`)
+columns(description='age')        # substring match -> several hits (file_type, year_of_*, subject_id);
+                                  #    pick age_at_observation (integer, years, on `observation`)
 columns(column=['*diagnos*'])     # -> diagnosis (on `observation`)
 ```
 
@@ -58,8 +59,9 @@ cohort = get_subject_data(match_all=['60 < age_at_observation <= 70',
 
 ## 5. Bring in related data — and keep it readable
 
-A subject can have many observations, so adding the whole observation table fans rows out. Collate
-instead, then read or explode the nested frame:
+A subject can have many observations. `add_columns='observation.*'` keeps one row per subject but packs
+each observation column into a (de-duplicated, unaligned) list cell — collate instead to get a
+row-aligned nested frame, then read or explode it:
 
 ```python
 cohort = get_subject_data(match_all=['60 < age_at_observation <= 70', 'diagnosis = *adenocarcinoma*',
