@@ -1,0 +1,27 @@
+# CTDC (Clinical & Translational Data Commons) GraphQL query catalogue
+# Generated from live introspection of https://clinical.datacommons.cancer.gov/v1/graphql/
+# ( {"query":"{ __schema { queryType { fields ... } } }","variables":{}} ). 19 fields.
+# Format: queryName(arg1, arg2, ...) -> ReturnType
+# NOTE: schemaVersion is the only neo4j-backed query and currently errors on the public
+#       endpoint (it tries to reach a neo4j store); the other 18 are Elasticsearch-backed and work.
+
+queryType: QueryType | TOTAL fields: 19
+schemaVersion() -> String
+studyByStudyShortName(study_short_name, study_id) -> [Study]
+getAllStudies() -> [Study]
+studyDiagnosisByStudyShortName(study_short_name, study_id) -> [StudyDiagnosis]
+StudySpecimenByStudyShortName(study_short_name, study_id) -> [StudySpecimen]
+StudyDataFileByStudyShortName(study_short_name, study_id) -> [StudyDataFile]
+getHomePage() -> [HomePage]
+getInteropData() -> [Interop]
+participantOverview(participant_id, ctep_disease_term, primary_diagnosis_disease_group, stage_of_disease, tumor_grade, sex, race, ethnicity, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, data_file_type, data_file_format, order_by, sort_direction, first, offset) -> [ParticipantOverview]
+biospecimenOverview(participant_id, specimen_id, ctep_disease_term, primary_diagnosis_disease_group, stage_of_disease, tumor_grade, sex, race, ethnicity, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, data_file_type, data_file_format, data_file_uuid, order_by, sort_direction, first, offset) -> [BiospecimenOverview]
+fileOverview(participant_id, ctep_disease_term, primary_diagnosis_disease_group, stage_of_disease, tumor_grade, sex, race, ethnicity, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, specimen_record_id, specimen_id, data_file_type, data_file_format, data_file_uuid, drs_uri, order_by, sort_direction, first, offset) -> [FileOverview]
+participant_data_files(participant_id, ctep_disease_term, primary_diagnosis_disease_group, stage_of_disease, tumor_grade, sex, race, ethnicity, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, data_file_type, data_file_format, data_file_uuid, order_by, sort_direction, first, offset) -> [FileParticipant]
+biospecimen_data_files(participant_id, specimen_id, specimen_record_id, ctep_disease_term, primary_diagnosis_disease_group, stage_of_disease, tumor_grade, sex, race, ethnicity, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, data_file_type, data_file_format, data_file_uuid, order_by, sort_direction, first, offset) -> [FileOverview]
+searchParticipants(ctep_disease_term, stage_of_disease, tumor_grade, sex, race, ethnicity, study_short_name, primary_diagnosis_disease_group, carcinogen_exposure, targeted_therapy, targeted_therapy_string, anatomical_collection_site, specimen_type, tissue_category, assessment_timepoint, association, data_file_type, data_file_format, participant_id) -> SearchResult
+fileIDsFromList(participant_id, specimen_id, data_file_uuid, data_file_name) -> [String]
+filesInList(data_file_uuid, order_by, sort_direction, first, offset) -> [FileOverview]
+globalSearch(input, first, offset, order_by, sort_direction, participant_id) -> GlobalSearchResult
+clinicalData(study_short_name, study_id) -> [ClinicalData]
+clinicalTrialData(study_short_name, study_id) -> [ClinicalTrialData]

@@ -1,0 +1,20 @@
+credentials: []
+# The Clinical and Translational Data Commons (CTDC) GraphQL API is open-access for metadata and
+# search. No API key, token, cookie, OAuth flow, or login is required for any query. There is nothing
+# to put in an Authorization header; requests are anonymous. Two transport requirements:
+#   - Requests must use HTTP POST (a GET is rejected with "API will only accept POST requests").
+#   - The POST body must include a `variables` key (even an empty {}), or the server errors with
+#     "Cannot invoke java.util.Map.keySet() because variables is null".
+#
+# IMPORTANT: this API returns METADATA and SEARCH results ONLY. It does not stream file bytes, and
+# there is no credential that unlocks downloads through it.
+#   - File records expose a CRDC DRS identifier (data_file_uuid / drs_uri like
+#     `dg.4DFC/<uuid>` → `drs://nci-crdc.datacommons.io/dg.4DFC/<uuid>`); `data_file_location` is often
+#     null. Download bytes out-of-band: resolve the DRS id, or load the files into the NCI Cancer
+#     Genomics Cloud (CGC) for analysis. Studies carry consent_groups; controlled data (where present)
+#     is governed through CRDC/dbGaP, not through a credential passed to this API.
+description: >-
+  No credentials required. The CTDC GraphQL API is an open-access metadata/search interface; all
+  queries are anonymous (HTTP POST only, and the body must include a `variables` key). The API does not
+  download data — files are fetched out-of-band via their CRDC DRS id or the Cancer Genomics Cloud.
+service: "https://clinical.datacommons.cancer.gov/"
