@@ -112,17 +112,29 @@ the skill's own examples, so a pass demonstrates the skill *generalizes* rather 
 worked examples. Each prompt embeds a known trap (e.g. value casing, wrong-commons routing, transient
 null responses) and a gradeable outcome.
 
-Test suites live in [`test_queries/`](test_queries/):
+Test suites live in [`test_harness/queries_md/`](test_harness/queries_md/) — **one file per external service**, each with
+verified ground truth and, per query, machine-gradeable **Checks** (substring / number-with-tolerance /
+set-membership / regex / behavioral assertions) plus an **Automated grading** section, so the markdown
+is authoritative for a generated code test suite:
 
-- **[`test_queries/TEST_QUERIES.md`](test_queries/TEST_QUERIES.md)**: CDA generalization suite: ~20 prompts across core query mechanics, file-modality → correct hand-off, full locate→analyze round-trips, and out-of-scope requests the agent should decline. Includes a scoring rubric.
-- **[`test_queries/pdc_test.md`](test_queries/pdc_test.md)**: PDC live-harness suite: discovery, quantitation interpretation (relative vs absolute), and file download / version-resolution / robustness, with verified ground truth (PDC Data Release 6.1).
+- **[`test_harness/queries_md/cda_test.md`](test_harness/queries_md/cda_test.md)**: CDA (`cancer-data-aggregator`) — core query mechanics, file-modality → correct hand-off, full locate→analyze round-trips, and out-of-scope requests the agent should decline. Includes a scoring rubric.
+- **[`test_harness/queries_md/gdc_test.md`](test_harness/queries_md/gdc_test.md)**: GDC (`genomic-data-commons`) — project discovery (don't default to TCGA), the `case_filters` mutation-frequency denominator trap, "highly expressed" = most-variable, array-of-filters survival log-rank, and the facet-name (200-not-400) trap.
+- **[`test_harness/queries_md/pdc_test.md`](test_harness/queries_md/pdc_test.md)**: PDC (`proteomic-data-commons`) — discovery, quantitation interpretation (relative vs absolute), and file download / version-resolution / robustness.
+- **[`test_harness/queries_md/gc_test.md`](test_harness/queries_md/gc_test.md)**: GC (`general-commons`) — fallback-routing boundary, GC-only caNanoLab data + the non-`phs` key quirk, `phs_accession` resolution + String-cast, faceted search, and the DRS / no-direct-download model.
+- **[`test_harness/queries_md/icdc_test.md`](test_harness/queries_md/icdc_test.md)**: ICDC (`integrated-canine-data-commons`) — faceted cohort building, controlled-vocabulary (empty ≠ absent), mapping one dog across studies, per-study clinical detail + the empty-node trap, and files → DRS → manifest.
+- **[`test_harness/queries_md/ctdc_test.md`](test_harness/queries_md/ctdc_test.md)**: CTDC (`clinical-translational-data-commons`) — the required `variables`-key first-call quirk, `GroupCount.subjects`, a fresh disease cohort + its therapies, the carcinogen-exposure facet, the bracketed-string array quirk, and per-specimen-vs-per-participant counting.
+- **[`test_harness/queries_md/psdc_test.md`](test_harness/queries_md/psdc_test.md)**: PS-DC (`population-sciences-data-commons`) — study-level demographics, the participant-level "not-live" boundary (no fabrication), `primarySiteMorphology`, the `subjects`-means-studies facet caveat, and the dbGaP handoff.
 
-Ground-truth counts were verified live (≈ mid-2026) and **drift with each data release**; grading
-targets the *approach* and the right order of magnitude, re-baselining against each commons' metrics
-endpoint when numbers shift.
+Each suite deliberately uses diseases, genes, studies, breeds, and IDs that appear **nowhere** in that
+skill's own `examples/` (e.g. kidney/colorectal rather than GDC's breast; bladder cancer rather than
+ICDC's osteosarcoma), so a pass demonstrates the skill *generalizes* rather than echoing its examples.
+Ground-truth values were verified live on **2026-06-11** (GDC Data Release 45.0; the Bento/GraphQL
+commons at their then-current loads) and **drift with each data release** — `number` checks grade the
+right order of magnitude / tolerance, re-baselining against each commons' metrics endpoint when numbers
+shift, while the graded *behaviors* (right endpoint, right filter slot, right interpretation) are stable.
 
-_To be filled out: per-skill pass rates, the harness/runner used, regression cadence, and coverage for
-the GDC, GC, and IDC skills._
+The Imaging Data Commons (IDC) skill is fetched remotely (see [`skills.json`](skills.json)) and is not
+yet covered here. _To be filled out: per-skill pass rates, the harness/runner used, and regression cadence._
 
 ---
 

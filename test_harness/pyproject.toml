@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beaker-biomedical-test-harness"
+version = "0.1.0"
+description = "Evaluation harness for the NCI CRDC agent skills (queries_md answer keys, plain + archytas backends)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "Satchel Baldwin", email = "satchel@jataware.com" },
+]
+dependencies = [
+  # The agentic wrapper that powers the app — used by the `archytas` backend.
+  "archytas>=2.0.0",
+  # The `plain` backend talks to the Anthropic Messages API directly.
+  "anthropic>=0.69",
+  # Libraries the skills' own example code imports (so a failure reflects the
+  # skill, not a missing dependency).
+  "requests>=2.31",
+  "cdapython>=2.1.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-xdist>=3.5",   # parallel live tests: pytest --run-live -n 8
+]
+
+[project.scripts]
+skill-harness = "harness.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["harness"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = [
+  "live: hits the live Anthropic API and live CRDC APIs (opt-in via --run-live)",
+]
