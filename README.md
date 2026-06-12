@@ -1,14 +1,13 @@
-# beaker-biomedical: agent skills for the Cancer Research Data Commons
+# Beaker Biomedical: an agent for the Cancer Research Data Commons data fabric
 
-A prototype AI agent, packaged as a container, that answers natural-language questions against the
-NCI **Cancer Research Data Commons (CRDC)** repositories. It is built on
-[Beaker](https://github.com/jataware/beaker-kernel), a Jupyter-based notebook with a built-in,
+An agent powered by [Beaker](https://github.com/jataware/beaker-notebook), packaged as a container, that provides a natural-language interface to query and use data from the 
+NCI **Cancer Research Data Commons (CRDC)** data fabric. Beaker is an AI-enabled computational notebook with a built-in,
 code-running AI assistant, and equipped with a set of **Agent Skills**, one per CRDC repository,
-that teach the agent how each commons' API works.
+that teach the agent how each commons' API works. It also provides a top-level skill for the [Cancer Data Aggregator (CDA)](https://cda.readthedocs.io/) API and Python Library.
 
-> **Status: prototype.** This is an early deliverable for the Cancer Genomics Cloud (CGC) developer
-> team to evaluate the *approach*: skills-driven agentic access to CRDC. The skills are hand-authored
-> and still improving; answer quality tracks skill quality and is expected to climb as the skills are
+> Note: This is a preliminary implementation for the Cancer Genomics Cloud (CGC) developer
+> team to evaluate the *approach*: skills-driven agentic access to CRDC. The skills are very much a work in progress
+> and still improving; answer quality and user experience tracks with skill quality and is expected to climb as the skills are
 > refined. See [Expected failure modes](#expected-failure-modes).
 
 ---
@@ -40,6 +39,7 @@ an LLM API key and `docker-compose up`.
 
 | Commons | Skill | Interface |
 |---|---|---|
+| Cancer Data Aggregator (CDA) | `cancer-data-aggregator` | `cdapython` (cross-repository metadata) |
 | Genomic Data Commons (GDC) | `genomics-data-commons` | REST API |
 | Proteomic Data Commons (PDC) | `proteomic-data-commons` | GraphQL |
 | Imaging Data Commons (IDC) | *fetched remotely* (see below) | `idc-index` |
@@ -47,7 +47,7 @@ an LLM API key and `docker-compose up`.
 | Integrated Canine Data Commons (ICDC) | `integrated-canine-data-commons` | GraphQL |
 | Clinical and Translational Data Commons (CTDC) | `clinical-translational-data-commons` | GraphQL |
 | Population Sciences Data Commons (PS-DC) | `population-sciences-data-commons` | GraphQL (prototype) |
-| Cancer Data Aggregator (CDA) | `cancer-data-aggregator` | `cdapython` (cross-repository metadata) |
+
 
 CDA is the cross-cutting entry point: it *locates* data across all the repositories (returning DRS
 URIs), then hands off to the repository-specific skill for deep analysis or download.
@@ -72,8 +72,9 @@ All skills live in the [`skills/`](skills/) directory and are mounted into the c
 The **Imaging Data Commons (IDC)** skill is not vendored in this repo. It is referenced by URL in
 [`skills.json`](skills.json) and pulled in at runtime from the upstream
 [`ImagingDataCommons/idc-claude-skill`](https://github.com/ImagingDataCommons/idc-claude-skill)
-repository. Add or remove remote skills by editing `skills.json` (mounted at
-`/beaker/.beaker/skills.json`).
+repository. 
+
+> **Note**: Externally hosted (e.g. via Github) skills such as the IDC skill can be managed via `skills.json`. Add or remove remote skills by editing `skills.json` (which mounts to the built container at `/beaker/.beaker/skills.json`).
 
 ---
 
