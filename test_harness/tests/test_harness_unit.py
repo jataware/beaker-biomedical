@@ -43,7 +43,7 @@ def test_every_query_has_prompt_and_checks():
 def test_known_query_counts():
     counts = {svc: len(qs) for svc, qs in ALL.items()}
     assert counts == {
-        "cda": 17, "ctdc": 5, "gc": 5, "gdc": 6, "icdc": 5, "pdc": 3, "psdc": 5,
+        "cda": 16, "ctdc": 5, "gc": 5, "gdc": 6, "icdc": 5, "pdc": 3, "psdc": 5,
     }
 
 

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "beaker-biomedical-test-harness"
 version = "0.1.0"
-description = "Evaluation harness for the NCI CRDC agent skills (queries_md answer keys, plain + archytas backends)."
+description = "Evaluation harness for the NCI CRDC agent skills (queries_md answer keys, unified LiteLLM engine)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -13,10 +13,10 @@ authors = [
   { name = "Satchel Baldwin", email = "satchel@jataware.com" },
 ]
 dependencies = [
-  # The agentic wrapper that powers the app — used by the `archytas` backend.
-  "archytas>=2.0.0",
-  # The `plain` backend talks to the Anthropic Messages API directly.
-  "anthropic>=0.69",
+  # Single model-access abstraction for both the agent and the judge: every
+  # provider (Anthropic / OpenAI / Gemini natively, everything else via
+  # OpenRouter) is reached through litellm with one OpenAI-style tool-calling loop.
+  "litellm>=1.89",
   # Libraries the skills' own example code imports (so a failure reflects the
   # skill, not a missing dependency).
   "requests>=2.31",
@@ -27,6 +27,7 @@ dependencies = [
 test = [
   "pytest>=8.0",
   "pytest-xdist>=3.5",   # parallel live tests: pytest --run-live -n 8
+  "ty>=0.0.49",          # static type checking: ty check harness
 ]
 
 [project.scripts]
@@ -40,5 +41,11 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
 markers = [
-  "live: hits the live Anthropic API and live CRDC APIs (opt-in via --run-live)",
+  "live: hits the live model APIs (via litellm) and live CRDC APIs (opt-in via --run-live)",
 ]
+
+[tool.ty.src]
+include = ["harness"]
+
+[tool.ty.environment]
+python-version = "3.11"

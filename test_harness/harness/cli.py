@@ -10,13 +10,14 @@ Dry-run a selection — assemble prompts and show the checks, but call nothing::
 
     python -m harness.cli run --service gdc --dry-run
 
-Run two GDC queries on both backends and write a JSON report::
+Run two GDC queries comparing two models, write a JSON report::
 
-    python -m harness.cli run --query gdc:Q1,gdc:Q2 --backend both -o report.json
+    python -m harness.cli run --query gdc:Q1,gdc:Q2 \
+        --model claude-sonnet-4-6,qwen/qwen3-coder-next -o report.json
 
-Run the whole suite on the archytas backend (explicit opt-in)::
+Run the whole suite on a single model (explicit opt-in)::
 
-    python -m harness.cli run --all --backend archytas
+    python -m harness.cli run --all --model claude-sonnet-4-6
 """
 
 from __future__ import annotations
@@ -28,23 +29,23 @@ import sys
 from pathlib import Path
 
 from . import report
-from .backends import BACKENDS
-from .config import DEFAULT_MODEL, HarnessConfig
+from .config import DEFAULT_JUDGE_MODEL, DEFAULT_MODEL, HarnessConfig
+from .llm.routing import PROVIDER_KEY_ENV, resolve_model
 from .runner import run_suite, select_queries
+
+# CLI key-override flags -> the *_API_KEY env var they populate.
+_KEY_FLAGS = {
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "openai_api_key": "OPENAI_API_KEY",
+    "gemini_api_key": "GEMINI_API_KEY",
+    "openrouter_api_key": "OPENROUTER_API_KEY",
+}
 
 
 def _split_csv(val: str | None) -> list[str] | None:
     if not val:
         return None
     return [v.strip() for v in val.split(",") if v.strip()]
-
-
-def _resolve_backends(name: str) -> list[str]:
-    if name == "both":
-        return list(BACKENDS)
-    if name in BACKENDS:
-        return [name]
-    raise SystemExit(f"--backend must be one of: plain, archytas, both (got {name!r})")
 
 
 def cmd_list(args) -> int:
@@ -72,9 +73,9 @@ def cmd_list(args) -> int:
 
 
 def cmd_run(args) -> int:
-    backends = _resolve_backends(args.backend)
     services = _split_csv(args.service)
     qids = _split_csv(args.query)
+    models = _split_csv(args.model) or [DEFAULT_MODEL]
 
     if not args.dry_run and not args.all and not services and not qids:
         raise SystemExit(
@@ -83,10 +84,14 @@ def cmd_run(args) -> int:
             "preview without calling the API.)"
         )
 
+    # Explicit per-provider key overrides from the CLI (env/.env fill the rest).
+    api_keys = {env: getattr(args, flag) for flag, env in _KEY_FLAGS.items()
+                if getattr(args, flag)}
+
     config = HarnessConfig(
-        model=args.model,
-        backend=backends[0],
-        api_key=args.api_key or "",
+        model=models[0],
+        judge_model=args.judge_model,
+        api_keys=api_keys,
         max_steps=args.max_steps,
         temperature=args.temperature,
         max_tokens=args.max_tokens,
@@ -101,17 +106,27 @@ def cmd_run(args) -> int:
         raise SystemExit("No queries matched the selection.")
 
     if args.dry_run:
-        return _dry_run(config, queries, backends, args)
+        return _dry_run(config, queries, models, args)
 
-    key = config.resolved_key()
-    if not key:
-        raise SystemExit(
-            "No ANTHROPIC_API_KEY found (checked --api-key, env, and repo .env)."
-        )
-    # Carry the resolved key explicitly so spawned workers don't depend on env/.env.
-    config.api_key = key
+    # Resolve exactly the provider keys this run needs — one per distinct provider
+    # across the test models plus (if grading) the judge model — and carry them on
+    # config so the spawn-based workers don't depend on the parent's env/.env.
+    needed = {resolve_model(m).api_key_env for m in models}
+    if config.use_judge:
+        needed.add(resolve_model(config.judge_model).api_key_env)
+    for env_var in sorted(needed):
+        key = config.key_for(env_var)
+        if not key:
+            providers = ", ".join(
+                p.value for p, e in PROVIDER_KEY_ENV.items() if e == env_var)
+            raise SystemExit(
+                f"No {env_var} found (checked the matching --*-api-key flag, env, "
+                f"and repo .env). Required to reach the selected {providers} model(s)"
+                + (" / judge." if config.use_judge else ".")
+            )
+        config.api_keys[env_var] = key
 
-    total_runs = len(queries) * len(backends)
+    total_runs = len(queries) * len(models)
     concurrency = max(1, min(args.concurrency, total_runs))
 
     # Sequential mode streams a per-run "running…" line and builds the judge
@@ -122,20 +137,20 @@ def cmd_run(args) -> int:
         judge = LLMJudge(config)
 
     print(
-        f"Running {len(queries)} queries × {len(backends)} backend(s) "
-        f"= {total_runs} runs | model={config.model} "
-        f"| judge={'on' if config.use_judge else 'off'} "
+        f"Running {len(queries)} queries × {len(models)} model(s) "
+        f"= {total_runs} runs | models={','.join(models)} "
+        f"| judge={config.judge_model if config.use_judge else 'off'} "
         f"| concurrency={concurrency}"
     )
 
-    def on_start(q, backend, i, total):
-        print(f"[{i}/{total}] {backend:8s} {q.ref:12s} running…", flush=True)
+    def on_start(q, model, i, total):
+        print(f"[{i}/{total}] {report._short(model):16s} {q.ref:12s} running…", flush=True)
 
     def on_done(res, i, total):
         print(f"[{i}/{total}] " + report.render_run_line(res), flush=True)
 
     suite = run_suite(
-        config, backends, services=services, qids=qids, judge=judge,
+        config, models, services=services, qids=qids, judge=judge,
         concurrency=concurrency,
         on_start=on_start if concurrency == 1 else None,
         on_done=on_done,
@@ -157,9 +172,9 @@ def cmd_run(args) -> int:
     return 0 if all(r.passed for r in suite.results) else 1
 
 
-def _dry_run(config, queries, backends, args) -> int:
+def _dry_run(config, queries, models, args) -> int:
     from . import skills
-    print(f"DRY RUN — {len(queries)} queries × {len(backends)} backend(s), no API calls.\n")
+    print(f"DRY RUN — {len(queries)} queries × {len(models)} model(s), no API calls.\n")
     for q in queries:
         print(f"  {q.ref:12s} {len(q.checks):2d} checks — {q.title}")
         det = sum(1 for c in q.checks if c.type in
@@ -171,8 +186,20 @@ def _dry_run(config, queries, backends, args) -> int:
             msg = skills.build_user_message(q.service, q.prompt, config)
             print("        --- assembled user message (first 400 chars) ---")
             print("        " + msg[:400].replace("\n", "\n        "))
-    print(f"\nBackends: {', '.join(backends)} | model={config.model} | "
-          f"judge={'on' if not args.no_judge else 'off'}")
+    print("\nModel routing:")
+    for m in models:
+        r = resolve_model(m)
+        print(f"  {m}  →  {r.litellm_model}  [{r.provider.value}, key {r.api_key_env}]")
+    if config.use_judge:
+        jr = resolve_model(config.judge_model)
+        print(f"  judge: {config.judge_model}  →  {jr.litellm_model}  "
+              f"[{jr.provider.value}, key {jr.api_key_env}]")
+    return 0
+
+
+def cmd_compare(args) -> int:
+    from . import compare
+    print(compare.render(args.reports))
     return 0
 
 
@@ -190,22 +217,33 @@ def build_parser() -> argparse.ArgumentParser:
     pl.add_argument("--checks", action="store_true", help="show each check")
     pl.set_defaults(func=cmd_list)
 
-    pr = sub.add_parser("run", help="run queries through a backend and grade")
-    pr.add_argument("--backend", default="plain", help="plain | archytas | both")
-    pr.add_argument("--model", default=os.environ.get("HARNESS_MODEL", DEFAULT_MODEL))
+    pr = sub.add_parser("run", help="run queries through a model and grade")
+    pr.add_argument("--model", default=os.environ.get("HARNESS_MODEL"),
+                    help="comma list of test models, each routed through litellm by "
+                         "harness.llm.routing: bare claude-*/gpt-*/o*/gemini-* hit the "
+                         "native provider, everything else (e.g. qwen/qwen3-coder-next, "
+                         "google/gemma-4-31b-it) falls back to OpenRouter; an explicit "
+                         "provider/ prefix is honoured. Listing >1 model compares them "
+                         f"in one report. Default: {DEFAULT_MODEL}.")
+    pr.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL,
+                    help=f"model for the LLM judge (default: {DEFAULT_JUDGE_MODEL}); "
+                         "routed through litellm exactly like --model, independent of it")
     pr.add_argument("--service", help="comma list of services to run")
     pr.add_argument("--query", help="comma list of refs/qids to run")
     pr.add_argument("--all", action="store_true", help="run the entire suite")
     pr.add_argument("--max-steps", type=int, default=50)
     pr.add_argument("-j", "--concurrency", type=int, default=8,
                     help="parallel runs (separate processes); 1 = sequential "
-                         "with live streaming. Higher risks Anthropic rate limits.")
+                         "with live streaming. Higher risks provider rate limits.")
     pr.add_argument("--temperature", type=float, default=0.0)
     pr.add_argument("--max-tokens", type=int, default=4096)
     pr.add_argument("--timeout", type=int, default=600, help="seconds per query")
     pr.add_argument("--no-judge", action="store_true",
                     help="skip LLM grading of behavior/count_at_least checks")
-    pr.add_argument("--api-key", default="", help="override ANTHROPIC_API_KEY")
+    pr.add_argument("--anthropic-api-key", default="", help="override ANTHROPIC_API_KEY")
+    pr.add_argument("--openai-api-key", default="", help="override OPENAI_API_KEY")
+    pr.add_argument("--gemini-api-key", default="", help="override GEMINI_API_KEY")
+    pr.add_argument("--openrouter-api-key", default="", help="override OPENROUTER_API_KEY")
     pr.add_argument("--dry-run", action="store_true", help="preview only, no API")
     pr.add_argument("--show-prompt", action="store_true",
                     help="(dry-run) print assembled prompts")
@@ -213,6 +251,10 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--verbose", action="store_true", help="verbose agent output")
     pr.add_argument("-o", "--output", help="write a JSON report to this path")
     pr.set_defaults(func=cmd_run)
+
+    pc = sub.add_parser("compare", help="side-by-side comparison of report JSONs (no API)")
+    pc.add_argument("reports", nargs="+", help="report JSON paths written by `run -o`")
+    pc.set_defaults(func=cmd_compare)
     return p
 
 

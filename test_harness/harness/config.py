@@ -15,7 +15,11 @@ QUERIES_DIR = HARNESS_DIR / "queries_md"
 SKILLS_DIR = REPO_ROOT / "skills"
 ENV_FILE = REPO_ROOT / ".env"
 
+# Default test/agent model and judge model. Both are routed through litellm by
+# harness.llm.routing.resolve_model — a bare ``claude-*`` id always resolves to
+# the native ``anthropic/`` provider, never OpenRouter.
 DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
 
 # service code (from `<service>_test.md`) -> skill directory name under skills/
 SERVICE_TO_SKILL = {
@@ -52,30 +56,41 @@ def _parse_env_file(path: Path) -> dict[str, str]:
     return values
 
 
-def load_api_key(explicit: str | None = None) -> str:
-    """Resolve the Anthropic API key: explicit arg > env var > repo ``.env``."""
+def resolve_key(env_var: str, explicit: str | None = None) -> str:
+    """Resolve any provider API key: explicit arg > process env > repo ``.env``.
+
+    On a ``.env`` hit the value is also written back into ``os.environ`` (via
+    ``setdefault``) so litellm — which reads keys from the environment — sees it
+    too, in addition to the explicit ``api_key`` the harness passes per call.
+    """
     if explicit:
         return explicit
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return os.environ["ANTHROPIC_API_KEY"]
-    env = _parse_env_file(ENV_FILE)
-    key = env.get("ANTHROPIC_API_KEY", "")
-    if key:
-        # Make it visible to libraries (anthropic SDK, archytas) that read env.
-        os.environ.setdefault("ANTHROPIC_API_KEY", key)
-    return key
+    if os.environ.get(env_var):
+        return os.environ[env_var]
+    val = _parse_env_file(ENV_FILE).get(env_var, "")
+    if val:
+        os.environ.setdefault(env_var, val)
+    return val
 
 
 @dataclass
 class HarnessConfig:
-    """Everything a run needs. Sensible defaults so the CLI can override."""
+    """Everything a run needs. Sensible defaults so the CLI can override.
+
+    ``model`` (the agent under test) and ``judge_model`` are both routed through
+    litellm by :func:`harness.llm.routing.resolve_model`; either can name any
+    provider. ``api_keys`` carries explicit per-provider key overrides
+    (``env_var -> key``); it is a plain dict so it survives pickling to the
+    spawn-based worker processes, which otherwise can't read the parent's env.
+    """
 
     model: str = DEFAULT_MODEL
-    backend: str = "plain"  # "plain" | "archytas"
-    api_key: str = ""
+    judge_model: str = DEFAULT_JUDGE_MODEL
+    api_keys: dict[str, str] = field(default_factory=dict)  # *_API_KEY env var -> key
     max_steps: int = 50          # ReAct step budget per query (cap; only costs tokens if hit)
     temperature: float = 0.0
     max_tokens: int = 4096       # per model turn
+    num_retries: int = 2         # litellm transient-error retries per turn
     use_judge: bool = True       # LLM-grade `behavior` checks
     timeout: int = 600           # seconds per query (whole agent run)
     verbose: bool = False
@@ -84,5 +99,6 @@ class HarnessConfig:
     queries_dir: Path = field(default=QUERIES_DIR)
     skills_dir: Path = field(default=SKILLS_DIR)
 
-    def resolved_key(self) -> str:
-        return load_api_key(self.api_key)
+    def key_for(self, env_var: str) -> str:
+        """The resolved key for a provider's ``*_API_KEY`` env var."""
+        return resolve_key(env_var, self.api_keys.get(env_var))

@@ -1,21 +1,40 @@
 # Skill evaluation harness
 
 Runs the authoritative benchmark prompts in [`queries_md/`](queries_md/) through
-an agent backend with the matching NCI CRDC skill loaded, then **grades the
-agent's answer against the machine-gradeable `Checks` blocks** in those files.
+a model with the matching NCI CRDC skill loaded, then **grades the answer against
+the machine-gradeable `Checks` blocks** in those files.
 
-It answers one question per query: *with this skill loaded, does the agent reach
+It answers one question per query: *with this skill loaded, does the model reach
 the live-verified ground truth — using the right method, and avoiding the trap?*
 
-Two backends, so you can compare harnesses on the same skills and answer key:
+## One engine, any model
 
-| backend    | what it is                                                                 |
-|------------|----------------------------------------------------------------------------|
-| `plain`    | a minimal ReAct loop driven directly against the **Anthropic Messages API**, with one `run_python` tool. No archytas. |
-| `archytas` | the production `archytas` `ReActAgent` + `AnthropicModel` + `PythonTool` — the same wrapper the Beaker app uses (installed from PyPI). |
+There is a **single execution engine**: a `run_python` ReAct loop driven through
+**[litellm](https://github.com/BerriAI/litellm)**, which normalises OpenAI-style
+tool-calling across every provider. The only variable is the **model** — list one
+or several with `--model` and they all get the *identical* skill text + task.
 
-Both default to **`claude-sonnet-4-6`** (configurable). Both get the *identical*
-skill text + task; the only variable is the agent loop.
+Which provider a model id reaches is decided by one rule
+([`harness/llm/routing.py`](harness/llm/routing.py)):
+
+| model id | routed to | why |
+|----------|-----------|-----|
+| `claude-*` | `anthropic/…` | Anthropic hosts its own — **never OpenRouter** |
+| `gpt-*`, `o3-*`, `chatgpt-*` | `openai/…` | OpenAI hosts its own |
+| `gemini-*` | `gemini/…` | Google hosts its own |
+| everything else (`qwen/…`, `google/gemma-…`, `meta-llama/…`, …) | `openrouter/…` | **fallback** for open-weight / community models |
+| explicit `provider/model` prefix | honoured verbatim | `anthropic/`, `openai/`, `gemini/`, `vertex_ai/`, `openrouter/` |
+
+So `claude-sonnet-4-6` is *always* called natively on `ANTHROPIC_API_KEY`, and a
+slug like `qwen/qwen3-coder-next` falls back to OpenRouter — by construction, not
+by convention. A text-tool-call fallback keeps models that emit their native tool
+format as plain text usable (e.g. `google/gemma-4-31b-it`).
+
+**The judge is just another routed model.** The semantic `behavior` /
+`count_at_least` checks are graded by `--judge-model` (default `claude-sonnet-4-6`
+→ Anthropic), routed through litellm exactly like the agent and fully selectable
+(`--judge-model gemini-2.5-pro` works). A run needs the API key for every distinct
+provider across its test models *plus* the judge's; `--no-judge` drops the judge.
 
 ---
 
@@ -24,21 +43,25 @@ skill text + task; the only variable is the agent loop.
 ```
 test_harness/
 ├── harness/                 # the package
-│   ├── config.py            # paths, model, API-key resolution (.env aware)
+│   ├── config.py            # paths, model/judge defaults, per-provider key resolution (.env aware)
 │   ├── parsing.py           # *_test.md  ->  Query / Check objects
 │   ├── checks.py            # parse + grade each Check  ->  CheckResult
 │   ├── skills.py            # service -> skill dir; build system/user prompts
-│   ├── judge.py             # LLM judge for semantic checks (behavior, count_at_least)
-│   ├── runner.py            # select -> run -> grade
-│   ├── report.py            # console + JSON rendering
+│   ├── judge.py             # LLM judge for semantic checks (litellm, any provider)
+│   ├── runner.py            # select -> run -> grade  (one process per run)
+│   ├── report.py            # console + JSON rendering (JSON includes the full trace)
+│   ├── compare.py           # side-by-side comparison of N report JSONs
 │   ├── cli.py               # the CLI test runner  (python -m harness.cli)
-│   └── backends/
-│       ├── plain.py         # plain Anthropic backend
-│       └── archytas_backend.py
+│   └── llm/                 # the model-access layer (one litellm engine)
+│       ├── routing.py       # model id -> provider (the heart of the design)
+│       ├── completion.py    # the single typed litellm boundary
+│       ├── agent.py         # the unified run_python ReAct loop -> AgentRun
+│       ├── tools.py         # run_python tool schema + text-tool-call fallback
+│       └── sandbox.py       # in-process PyEnv exec sandbox + tool-result formatter
 ├── tests/                   # pytest: unit (no API) + live (opt-in)
 ├── queries_md/              # the 7 authoritative *_test.md answer keys
 ├── run.py                   # == python -m harness.cli
-└── pyproject.toml           # package + deps + pytest config
+└── pyproject.toml           # package + deps + pytest + ty config
 ```
 
 Each `<service>_test.md` maps to one skill under `../skills/`:
@@ -63,14 +86,30 @@ You're in a `uv` venv at `test_harness/.venv`. Install the harness and its deps:
 uv pip install -e ".[test]"
 ```
 
-This pulls `archytas` (from PyPI; it brings `anthropic` + `langchain`), plus
-`requests`/`cdapython` — the libraries the skills' own example code imports, so a
-failure reflects the **skill**, not a missing dependency.
+This pulls `litellm` (the single model-access layer), plus `requests`/`cdapython`
+— the libraries the skills' own example code imports, so a failure reflects the
+**skill**, not a missing dependency.
 
-### API key
+### API keys
 
-The harness reads `ANTHROPIC_API_KEY` from, in order: `--api-key`, the process
-env, then the repo's `../.env`. Nothing else is needed for open-access CRDC APIs.
+The harness reads each provider's key from, in order: the matching `--*-api-key`
+flag, the process env, then the repo's `../.env`:
+
+| env var | provider | when it's needed |
+|---------|----------|------------------|
+| `ANTHROPIC_API_KEY` | Anthropic (`claude-*`) | default agent + default judge |
+| `OPENAI_API_KEY` | OpenAI (`gpt-*`, `o*`) | a `gpt-*` / `o*` test or judge model |
+| `GEMINI_API_KEY` | Google (`gemini-*`) | a `gemini-*` test or judge model |
+| `OPENROUTER_API_KEY` | OpenRouter (everything else) | any open-weight slug |
+
+The CLI resolves only the keys a given run actually needs and errors up front if
+one is missing. Nothing else is needed for the open-access CRDC APIs.
+
+### Type checking
+
+```bash
+ty check harness        # or: uvx ty check harness
+```
 
 ---
 
@@ -81,61 +120,76 @@ env, then the repo's `../.env`. Nothing else is needed for open-access CRDC APIs
 python -m harness.cli list
 python -m harness.cli list --service gdc --checks
 
-# dry-run: assemble prompts, show the checks, call nothing
+# dry-run: assemble prompts, show the checks + model routing, call nothing
 python -m harness.cli run --service pdc --dry-run
 python -m harness.cli run --query gdc:Q1 --dry-run --show-prompt
 
-# run a couple of queries on both backends, write a JSON report
-python -m harness.cli run --query gdc:Q1,gdc:Q2 --backend both -o report.json
+# run a couple of queries comparing two models, write a JSON report
+python -m harness.cli run --query gdc:Q1,gdc:Q2 \
+    --model claude-sonnet-4-6,qwen/qwen3-coder-next -o report.json
 
-# run a whole skill suite on the archytas backend, with per-check detail
-python -m harness.cli run --service icdc --backend archytas --detail
+# run a whole skill suite on one model, with per-check detail
+python -m harness.cli run --service icdc --model claude-sonnet-4-6 --detail
 
 # run EVERYTHING in parallel (explicit opt-in — this is many live API calls)
-python -m harness.cli run --all --backend both -j 8 -o full.json
+python -m harness.cli run --all --model claude-sonnet-4-6 -j 8 -o full.json
+
+# run a non-Anthropic model via OpenRouter, judged by Gemini
+python -m harness.cli run --model qwen/qwen3-coder-next --judge-model gemini-2.5-pro \
+    --service cda -o qwen.json
+
+# compare saved reports side-by-side (no API)
+python -m harness.cli compare qwen.json gemma.json sonnet.json
 ```
 
 Runs are independent and parallelize across processes (`-j/--concurrency`,
 default 8). One process per run keeps each agent's `sys.stdout`/exec state
 isolated; wall-clock collapses to roughly the slowest run × (runs ÷ workers).
-`-j 1` forces sequential mode with live per-run streaming. Raising `-j` past
-your Anthropic tier's rate limit will cause `429`s, so push it up gradually.
+`-j 1` forces sequential mode with live per-run streaming. Raising `-j` past a
+provider's rate limit will cause `429`s, so push it up gradually.
 
 Key `run` flags:
 
 | flag | meaning |
 |------|---------|
-| `--backend` | `plain` \| `archytas` \| `both` (default `plain`) |
-| `--model` | model id (default `claude-sonnet-4-6`, or `$HARNESS_MODEL`) |
+| `--model` | comma list of test models, each routed through litellm (see the table above). Listing >1 compares them in one report. Default `claude-sonnet-4-6`; or `$HARNESS_MODEL` |
+| `--judge-model` | model for the judge (default `claude-sonnet-4-6`), routed like `--model`, independent of it |
 | `--service` / `--query` | narrow the selection (`gdc` / `gdc:Q1,pdc:Q2`) |
 | `--all` | run the full suite (required if no selection given) |
-| `--max-steps` | per-query ReAct budget (default 25; a cap, only costs tokens if hit) |
+| `--max-steps` | per-query ReAct budget (default 50; a cap, only costs tokens if hit) |
 | `-j/--concurrency` | parallel runs, one process each (default 8; `1` = sequential) |
 | `--no-judge` | skip LLM grading of `behavior`/`count_at_least` (leaves them unscored) |
-| `--dry-run` / `--show-prompt` | preview without calling the API |
+| `--anthropic-api-key` / `--openai-api-key` / `--gemini-api-key` / `--openrouter-api-key` | override the matching env var |
+| `--dry-run` / `--show-prompt` | preview (incl. model routing) without calling the API |
 | `--detail` | print every check result, not just failures |
-| `-o/--output` | write a full JSON report |
+| `-o/--output` | write a full JSON report (final answer, graded checks, full per-step `code_trace`, and a flat `transcript`) |
 
 `run` exits non-zero if any selected run fails (CI-friendly).
+
+A second subcommand, `compare <report.json> …`, prints a query × model grid plus
+per-check detail across any number of saved reports — no API calls. (It reads a
+report's top-level `model`, so write one report file per model for comparison.)
 
 ---
 
 ## pytest
 
 The same selection logic is exposed as parametrized tests — one per
-`(query, backend)`. Unit tests (parser + deterministic grader) run by default
-and need no key; the **live** tests are opt-in.
+`(query, model)`. Unit tests (parser, deterministic grader, routing, sandbox) run
+by default and need no key; the **live** tests are opt-in.
 
 ```bash
 pytest                                    # unit tests only (fast, no API)
-pytest --run-live --backend both -n 8     # full live suite, both backends, 8-way parallel
+pytest --run-live -n 8                    # full live suite, default model, 8-way parallel
 pytest --run-live --service gdc           # one suite
+pytest --run-live --model claude-sonnet-4-6,qwen/qwen3-coder-next   # compare models
 pytest --run-live --query gdc:Q1,pdc:Q1   # specific queries
-pytest --run-live --no-judge --backend plain
+pytest --run-live --no-judge
 ```
 
-Live test ids look like `gdc:Q1|plain`. A test passes when every *scored* check
-for that query passes. Parallelize with `-n <workers>` (pytest-xdist — each
+Live test ids look like `gdc:Q1|claude-sonnet-4-6`. A test passes when every
+*scored* check for that query passes. Live tests skip automatically if a needed
+provider key is absent. Parallelize with `-n <workers>` (pytest-xdist — each
 worker is its own process, so the same isolation as the CLI's `-j`).
 
 ---
@@ -154,8 +208,9 @@ Two families:
   tolerance (`±N%` of counts, `±N` absolute, `±N pp` for percentages, `== v` exact)
 - `set_contains` — every listed member appears in the answer
 
-**Semantic** — graded by an LLM judge (Sonnet) over the answer **and the code/tool
-trace**; left *unscored* under `--no-judge`:
+**Semantic** — graded by the LLM judge (`--judge-model`, default Sonnet, routed
+through litellm regardless of which model the agent ran) over the answer **and the
+code/tool trace**; left *unscored* under `--no-judge`:
 
 - `behavior` — a claim about *method* (which endpoint, which filter slot, which
   interpretation, a decline/redirect) — read from the emitted code
@@ -167,18 +222,19 @@ A query passes when all of its *scored* checks pass.
 
 ## Notes & caveats
 
-- **Live code execution.** Both backends `exec()` model-generated Python
-  in-process to call the public CRDC APIs (the same model archytas's `PythonTool`
-  uses). Run it where you'd run those skills.
+- **Live code execution.** The engine `exec()`s model-generated Python in-process
+  to call the public CRDC APIs. Run it where you'd run those skills.
 - **Drift.** Ground-truth numbers were live-verified on the dates in each
   `*_test.md` header and move with data releases; `number` checks grade by
   tolerance, not exact equality. The graded *behaviors* are stable. Re-baseline a
   suite if counts have shifted.
-- **Cost / time.** A full `--backend both --all` run is ~46×2 agent sessions plus
-  judge calls. Runs are independent, so `-j` parallelizes them (one process per
-  run); a single run is ~60–90s, so the full suite is roughly that × (runs ÷ `-j`).
-  Narrow with `--service`/`--query` while iterating; use `--dry-run` to preview
-  for free.
-- **Step budget.** Multi-step suites (PDC, the CDA round-trips) need headroom;
-  the archytas backend hard-fails a query if it exceeds `--max-steps`. Default 25
-  is comfortable; raise it if a complex query truncates.
+- **Cost / time.** A full `--all` run is ~46 agent sessions per model plus judge
+  calls. Runs are independent, so `-j` parallelizes them (one process per run); a
+  single run is ~60–90s, so the full suite is roughly that × (runs ÷ `-j`). Narrow
+  with `--service`/`--query` while iterating; use `--dry-run` to preview for free.
+- **Step budget.** Multi-step suites (PDC, the CDA round-trips) need headroom; a
+  query that exceeds `--max-steps` is recorded as an error. Default 50 is
+  comfortable; raise it if a complex query truncates.
+- **Run-to-run variance** is real even at temperature 0 (provider batching, MoE
+  routing), amplified by the multi-step loop and threshold checks — repeat and
+  average before ranking models.

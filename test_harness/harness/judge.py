@@ -3,9 +3,10 @@
 These are not string/number matches: ``behavior`` asserts something about the
 *method* the agent used (which endpoint, which filter slot, which
 interpretation), decidable from the code/tool trace; ``count_at_least`` asserts
-the answer enumerates at least N distinct items. The judge is a strict
-Anthropic call returning JSON ``{"pass": bool, "reason": str}``. It is
-deliberately conservative: if the evidence isn't present, it fails the check.
+the answer enumerates at least N distinct items. The judge is a strict,
+tool-free model call (routed through litellm like everything else, so any
+``judge_model`` provider works) returning JSON ``{"pass": bool, "reason": str}``.
+It is deliberately conservative: if the evidence isn't present, it fails.
 """
 
 from __future__ import annotations
@@ -13,9 +14,9 @@ from __future__ import annotations
 import json
 import re
 
-import anthropic
-
 from .config import HarnessConfig
+from .llm.completion import complete
+from .llm.routing import resolve_model
 from .parsing import Check, Query
 
 _JUDGE_SYSTEM = (
@@ -66,9 +67,17 @@ Does the answer satisfy the assertion? Return the JSON verdict.
 class LLMJudge:
     def __init__(self, config: HarnessConfig):
         self.config = config
-        self.client = anthropic.Anthropic(api_key=config.resolved_key())
+        self.resolved = resolve_model(config.judge_model)
+        self.api_key = config.key_for(self.resolved.api_key_env)
+        if not self.api_key:
+            raise RuntimeError(
+                f"no API key for judge provider {self.resolved.provider.value!r} "
+                f"(judge model {config.judge_model!r} needs {self.resolved.api_key_env})."
+            )
 
-    def __call__(self, check: Check, query: Query, answer: str, transcript: str):
+    def __call__(
+        self, check: Check, query: Query, answer: str, transcript: str
+    ) -> tuple[bool | None, str]:
         if check.type == "behavior":
             content = _BEHAVIOR_TMPL.format(
                 spec=check.spec, prompt=query.prompt, transcript=transcript[:18000]
@@ -80,14 +89,18 @@ class LLMJudge:
         else:  # pragma: no cover - only semantic types reach here
             return None, f"judge does not handle {check.type}"
 
-        resp = self.client.messages.create(
-            model=self.config.model,
-            max_tokens=300,
+        comp = complete(
+            model=self.resolved.litellm_model,
+            messages=[
+                {"role": "system", "content": _JUDGE_SYSTEM},
+                {"role": "user", "content": content},
+            ],
+            api_key=self.api_key,
             temperature=0.0,
-            system=_JUDGE_SYSTEM,
-            messages=[{"role": "user", "content": content}],
+            max_tokens=300,
+            num_retries=self.config.num_retries,
         )
-        text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        text = comp.text.strip()
         verdict = _extract_json(text)
         if verdict is None or "pass" not in verdict:
             return None, f"unparseable judge output: {text[:120]!r}"

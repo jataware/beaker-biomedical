@@ -10,6 +10,12 @@ from .runner import RunResult, Suite
 _TICK = {True: "PASS", False: "FAIL", None: "—"}
 
 
+def _short(model: str) -> str:
+    """Last path segment of a model id, for fixed-width console columns
+    (``openrouter/qwen/qwen3-coder-next`` → ``qwen3-coder-next``)."""
+    return model.split("/")[-1]
+
+
 def _check_dict(r: CheckResult) -> dict:
     return {
         "type": r.check.type,
@@ -27,7 +33,7 @@ def result_to_dict(res: RunResult) -> dict:
         "ref": res.query.ref,
         "title": res.query.title,
         "prompt": res.query.prompt,
-        "backend": res.backend,
+        "model": res.model,
         "passed": res.passed,
         "score": round(res.grade.score, 3),
         "n_pass": res.grade.n_pass,
@@ -38,13 +44,24 @@ def result_to_dict(res: RunResult) -> dict:
         "steps": res.run.steps,
         "final_answer": res.run.final_answer,
         "checks": [_check_dict(r) for r in res.grade.results],
-        "code_trace": [s.code for s in res.run.code_trace],
+        # Full agent trace, for post-hoc inspection without re-running: each step's
+        # code plus its captured output. `transcript` is the same flat rendering
+        # the judge sees (answer + code + clipped stdout), easy to eyeball.
+        "code_trace": [
+            {"code": s.code, "stdout": s.stdout, "stderr": s.stderr, "error": s.error}
+            for s in res.run.code_trace
+        ],
+        "transcript": res.run.transcript(),
     }
 
 
 def suite_to_dict(suite: Suite) -> dict:
+    # Keep top-level ``model`` (the configured default) so the per-file `compare`
+    # subcommand still reads it; ``models`` lists every model actually run.
     return {
         "model": suite.config.model,
+        "models": sorted({r.model for r in suite.results}),
+        "judge_model": suite.config.judge_model,
         "judge": suite.config.use_judge,
         "results": [result_to_dict(r) for r in suite.results],
         "summary": summary_stats(suite),
@@ -52,16 +69,16 @@ def suite_to_dict(suite: Suite) -> dict:
 
 
 def summary_stats(suite: Suite) -> dict:
-    by_backend: dict[str, list[RunResult]] = defaultdict(list)
+    by_model: dict[str, list[RunResult]] = defaultdict(list)
     for r in suite.results:
-        by_backend[r.backend].append(r)
+        by_model[r.model].append(r)
     out = {}
-    for backend, rs in by_backend.items():
+    for model, rs in by_model.items():
         passed = sum(1 for r in rs if r.passed)
         checks_pass = sum(r.grade.n_pass for r in rs)
         checks_fail = sum(r.grade.n_fail for r in rs)
         checks_unscored = sum(r.grade.n_unscored for r in rs)
-        out[backend] = {
+        out[model] = {
             "queries": len(rs),
             "queries_passed": passed,
             "query_pass_rate": round(passed / len(rs), 3) if rs else 0.0,
@@ -81,7 +98,7 @@ def render_run_line(res: RunResult) -> str:
     status = "PASS" if res.passed else "FAIL"
     err = f"  !{res.error}" if res.error else ""
     return (
-        f"[{status}] {res.backend:8s} {res.ref:10s} "
+        f"[{status}] {_short(res.model):16s} {res.ref:10s} "
         f"{res.grade.n_pass}/{res.grade.n_scored} checks "
         f"({res.grade.n_unscored} unscored)  {res.elapsed:5.1f}s{err}"
     )
@@ -89,7 +106,7 @@ def render_run_line(res: RunResult) -> str:
 
 def render_detail(res: RunResult) -> str:
     lines = [
-        f"=== {res.ref} [{res.backend}] — {res.query.title}",
+        f"=== {res.ref} [{res.model}] — {res.query.title}",
         f"    prompt: {res.query.prompt}",
         f"    {'PASS' if res.passed else 'FAIL'}  "
         f"score={res.grade.score:.2f}  steps={res.run.steps}  {res.elapsed:.1f}s"
@@ -105,10 +122,12 @@ def render_detail(res: RunResult) -> str:
 
 def render_summary(suite: Suite) -> str:
     stats = summary_stats(suite)
-    lines = ["", "=" * 64, f"SUMMARY  (model={suite.config.model}, judge={suite.config.use_judge})", "=" * 64]
-    for backend, s in stats.items():
+    lines = ["", "=" * 64,
+             f"SUMMARY  (judge={suite.config.judge_model if suite.config.use_judge else 'off'})",
+             "=" * 64]
+    for model, s in stats.items():
         lines.append(
-            f"  {backend:8s}  queries {s['queries_passed']}/{s['queries']} "
+            f"  {_short(model):16s}  queries {s['queries_passed']}/{s['queries']} "
             f"({s['query_pass_rate']*100:.0f}%)   "
             f"checks {s['checks_passed']}/{s['checks_passed'] + s['checks_failed']} "
             f"({s['check_pass_rate']*100:.0f}%)   "
@@ -125,5 +144,5 @@ def render_failures(suite: Suite) -> str:
     for r in fails:
         bad = [cr for cr in r.grade.results if cr.passed is False]
         why = "; ".join(f"{c.check.type}:{c.detail}" for c in bad[:3]) or (r.error or "?")
-        lines.append(f"  {r.backend:8s} {r.ref:10s} — {why}")
+        lines.append(f"  {_short(r.model):16s} {r.ref:10s} — {why}")
     return "\n".join(lines)

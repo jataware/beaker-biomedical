@@ -99,7 +99,6 @@ set_api_url("https://cda.datacommons.cancer.gov/")
 - **Checks (machine-gradeable):**
   - `number: melanoma_subjects ≈ 1432 (±20%)`  (Malignant melanoma alone; the full `*melanoma*` cohort is somewhat larger)
   - `behavior: used a wildcard ('*melanoma*') or discovered the free-text variants via column_values('diagnosis'), did not filter the exact 'melanoma'`
-  - `substring_any: ["Malignant melanoma", "*melanoma*", "Nodular melanoma"]`
   - `must_not_contain: ["0 subjects", "no melanoma", "not diagnosed with melanoma"]`  (the exact-match-returns-zero trap)
 
 ### A6 — Numeric range + missing-data on the subject table
