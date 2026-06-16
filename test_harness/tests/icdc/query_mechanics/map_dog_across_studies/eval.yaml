@@ -1,0 +1,13 @@
+checks:
+  - count_at_least:
+      name: "studies_for_dog"
+      min: 2
+  - count_at_least:
+      name: "case_ids_for_dog"
+      min: 2
+  - regex:
+      name: "individual_id"
+      pattern: '\b0\d{3}\b'
+  - substring_any: ["UBC01", "UBC02"]
+  - behavior: "resolved a shared canine_individual via multiStudyCases or the canine_individual node"
+  - must_not_contain: ["0009"]

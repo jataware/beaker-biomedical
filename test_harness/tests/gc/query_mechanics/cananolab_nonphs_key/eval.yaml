@@ -1,0 +1,14 @@
+checks:
+  - substring_all: ["10.17917", "caNanoLab"]
+  - substring_any: ["Nanotechnology", "nanomaterial"]
+  - number:
+      name: "characterizations"
+      target: 1456
+      tolerance_percent: 15
+  - number:
+      name: "compositions"
+      target: 1657
+      tolerance_percent: 15
+  - must_not_contain: ["phs010017", "phs10017"]
+  - behavior: "queried a caNanoLab Data-Type node (characterizations/compositions/investigators/publications/protocols) keyed by phs_accession \"10.17917\""
+  - behavior: "kept the request in GC (recognized nanotech as GC-native) rather than redirecting to a specialized commons"

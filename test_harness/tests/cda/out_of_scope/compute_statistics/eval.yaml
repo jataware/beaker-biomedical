@@ -1,0 +1,4 @@
+checks:
+  - behavior: "declined to compute survival in CDA; routed the curve + p-value to GDC /analysis/survival (genomic-data-commons)"
+  - substring_any: ["/analysis/survival", "genomic-data-commons", "GDC"]
+  - must_not_contain: ["p-value from CDA", "CDA survival", "KM curve from CDA", "log-rank ... CDA"]

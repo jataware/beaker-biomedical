@@ -1,0 +1,24 @@
+checks:
+  - number:
+      name: "PLCO_participants"
+      target: 151383
+      tolerance_percent: 5
+  - number:
+      name: "PLCO_median_age"
+      target: 62
+      tolerance_absolute: 2
+  - number:
+      name: "PLCO_female"
+      target: 76680
+      tolerance_percent: 5
+  - number:
+      name: "PLCO_male"
+      target: 74703
+      tolerance_percent: 5
+  - number:
+      name: "PLCO_white"
+      target: 132310
+      tolerance_percent: 5
+  - substring_all: ["female", "white"]
+  - must_not_contain: ["28414", "20446"]
+  - behavior: "queried studyDemographics with study_short_name \"PLCO\" and selected { group subjects } on the GroupCounts fields (did not select a scalar"

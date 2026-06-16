@@ -1,0 +1,17 @@
+checks:
+  - substring: "[\"phs002187\"]"
+  - number:
+      name: "participants"
+      target: 60
+      tolerance_absolute: 3
+  - number:
+      name: "files"
+      target: 3342
+      tolerance_percent: 10
+  - number:
+      name: "total_size_TB"
+      target: 5.9
+      tolerance_percent: 20
+  - behavior: "passed phs_accession to the files/participants query (did not hit a MissingFieldArgument error)"
+  - behavior: "set first>10 or looped offset to retrieve all ~3342 files (not just the default 10)"
+  - behavior: "cast file_size from String to int before summing/comparing (not lexical string math)"

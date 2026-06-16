@@ -3,9 +3,9 @@
 Layout (one directory per test)::
 
     tests/<service>/<category>/<test>/
-        test.md   — YAML frontmatter (name, description) then the prompt (everything else)
-        eval.md   — free prose under ``# Expect`` / ``# Failure Cases`` plus a fenced
-                    ```yaml block under ``# Automated Checks`` (the only machine-read part)
+        test.md      — YAML frontmatter (name, description) then the prompt (everything else)
+        rationale.md — prose under ``# Intended Behavior`` / ``# Incorrect Behavior`` (NOT parsed)
+        eval.yaml    — the machine-read checks: a top-level ``checks:`` list
 
 Each check in that YAML block is a single-key map keyed by its check type::
 
@@ -37,8 +37,6 @@ CHECK_TYPES = (
     "number",
     "regex",
 )
-
-_YAML_FENCE_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL)
 
 
 @dataclass
@@ -153,7 +151,7 @@ def check_from_item(item: dict) -> Check:
 
 
 # --------------------------------------------------------------------------- #
-# reading test.md / eval.md
+# reading test.md / eval.yaml
 # --------------------------------------------------------------------------- #
 def _split_frontmatter(text: str) -> tuple[dict, str]:
     """Return (frontmatter dict, body). Frontmatter is a leading ``---`` block."""
@@ -165,11 +163,8 @@ def _split_frontmatter(text: str) -> tuple[dict, str]:
     return {}, text
 
 
-def _checks_from_eval(eval_text: str) -> list[Check]:
-    m = _YAML_FENCE_RE.search(eval_text)
-    if not m:
-        return []
-    data = yaml.safe_load(m.group(1)) or {}
+def _checks_from_yaml(yaml_text: str) -> list[Check]:
+    data = yaml.safe_load(yaml_text) or {}
     items = data.get("checks", []) if isinstance(data, dict) else []
     return [check_from_item(it) for it in items]
 
@@ -177,8 +172,8 @@ def _checks_from_eval(eval_text: str) -> list[Check]:
 def parse_test(test_dir: Path, service: str, qid: str) -> Query:
     test_dir = Path(test_dir)
     meta, body = _split_frontmatter((test_dir / "test.md").read_text(encoding="utf-8"))
-    eval_md = test_dir / "eval.md"
-    checks = _checks_from_eval(eval_md.read_text(encoding="utf-8")) if eval_md.exists() else []
+    eval_yaml = test_dir / "eval.yaml"
+    checks = _checks_from_yaml(eval_yaml.read_text(encoding="utf-8")) if eval_yaml.exists() else []
     return Query(
         service=service,
         qid=qid,

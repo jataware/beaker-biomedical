@@ -1,0 +1,15 @@
+checks:
+  - substring: "ajcc_pathologic_stage"
+  - set_contains:
+      name: "stages"
+      members: ["stage i", "stage ii", "stage iii", "stage iv"]
+  - number:
+      name: "stage_i_count"
+      target: 270
+      tolerance_percent: 15
+  - number:
+      name: "stage_iv_count"
+      target: 83
+      tolerance_percent: 15
+  - behavior: "used diagnoses.ajcc_pathologic_stage (or inspected warnings.facets after tumor_stage failed), did not report an empty breakdown"
+  - must_not_contain: ["no staging data", "stage breakdown is empty", "0 cases per stage"]

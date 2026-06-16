@@ -1,0 +1,17 @@
+checks:
+  - number:
+      name: "pValue"
+      target: 0.37
+      tolerance_absolute: 0.1
+  - number:
+      name: "male_n"
+      target: 101
+      tolerance_absolute: 5
+  - number:
+      name: "female_n"
+      target: 83
+      tolerance_absolute: 5
+  - substring_any: ["not significant", "no significant", "not statistically significant", "no statistically significant"]
+  - substring: "days"
+  - behavior: "passed an array of two filters objects to /analysis/survival to obtain overallStats.pValue (NOT a single filters object)"
+  - must_not_contain: ["statistically significant difference", "significantly different", "p < 0.05"]

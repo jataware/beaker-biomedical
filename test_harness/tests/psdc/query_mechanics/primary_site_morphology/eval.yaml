@@ -1,0 +1,14 @@
+checks:
+  - set_contains:
+      name: "PLCO_primary_sites"
+      members: ["prostate gland", "breast", "lung", "colorectum"]
+  - number:
+      name: "PLCO_prostate_site"
+      target: 11129
+      tolerance_percent: 10
+  - substring_any: ["adenocarcinoma", "8140/3"]
+  - count_at_least:
+      name: "PLCO_primary_sites"
+      min: 8
+  - must_not_contain: ["primary_site", "FieldUndefined"]
+  - behavior: "selected { group subjects } (and group_code for morphology) on primarySiteMorphology — not primary_site/count"

@@ -2,7 +2,7 @@
 
 Runs the authoritative benchmark prompts in [`tests/`](tests/) through a model
 with the matching NCI CRDC skill loaded, then **grades the answer against the
-machine-gradeable `# Automated Checks` YAML** in each test's `eval.md`.
+machine-gradeable checks** in each test's `eval.yaml`.
 
 It answers one question per query: *with this skill loaded, does the model reach
 the live-verified ground truth — using the right method, and avoiding the trap?*
@@ -44,7 +44,7 @@ provider across its test models *plus* the judge's; `--no-judge` drops the judge
 test_harness/
 ├── harness/                 # the package
 │   ├── config.py            # paths, model/judge defaults, per-provider key resolution (.env aware)
-│   ├── parsing.py           # tests/.../{test.md,eval.md}  ->  Query / Check objects
+│   ├── parsing.py           # tests/.../{test.md,eval.yaml}  ->  Query / Check objects
 │   ├── checks.py            # grade each Check (reads check.params)  ->  CheckResult
 │   ├── skills.py            # service -> skill dir; build system/user prompts
 │   ├── judge.py             # LLM judge for semantic checks (litellm, any provider)
@@ -59,7 +59,7 @@ test_harness/
 │       ├── tools.py         # run_python tool schema + text-tool-call fallback
 │       └── sandbox.py       # in-process PyEnv exec sandbox + tool-result formatter
 ├── tests/                   # the benchmark corpus: tests/<service>/<category>/<test>/
-│   └── <service>/<category>/<test>/{test.md, eval.md}
+│   └── <service>/<category>/<test>/{test.md, rationale.md, eval.yaml}
 ├── unit/                    # pytest: unit (no API) + live (opt-in)
 ├── run.py                   # == python -m harness.cli
 └── pyproject.toml           # package + deps + pytest + ty config
@@ -69,11 +69,15 @@ Each test lives in its own directory:
 
 - **`test.md`** — optional YAML frontmatter (`name`, `description`); everything after
   the frontmatter is the prompt handed verbatim to the agent.
-- **`eval.md`** — `# Expect` and `# Failure Cases` are free prose (human/HTML only);
-  the fenced `yaml` block under `# Automated Checks` is the machine-read answer key.
+- **`rationale.md`** — `# Intended Behavior` and `# Incorrect Behavior` prose: **design
+  rationale only**, never parsed, never sent to the agent or judge.
+- **`eval.yaml`** — the machine-read answer key: a top-level `checks:` list.
 
 A test's `ref` is `<service>:<category>/<test>` (e.g. `cda:core_query_mechanics/discovery`);
 `--query` also accepts the bare `<category>/<test>` or just the leaf slug (`discovery`).
+
+[`tests/README.md`](tests/) is the authoritative reference for the corpus format and for
+**exactly what data reaches the agent and the judge at each step** — read it before authoring.
 
 Each `tests/<service>/` directory maps to one skill under `../skills/`:
 

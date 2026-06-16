@@ -1,0 +1,17 @@
+checks:
+  - count_at_least:
+      name: "studies"
+      min: 2
+  - set_contains:
+      name: "study_ids"
+      members: ["PDC000127"]
+  - regex:
+      name: "returned study ids"
+      pattern: 'PDC\d{6}'
+  - number:
+      name: "PDC000127_cases"
+      target: 124
+      tolerance_percent: 10
+  - substring_any: ["Proteome", "Phosphoproteome", "Glycoproteome", "Metabolome"]
+  - behavior: "enumerated studies via a discovery query (programsProjectsStudies / diseasesAvailable), did NOT hardcode a single study"
+  - must_not_contain: ["the only study", "single study", "CPTAC-3 is the one study"]

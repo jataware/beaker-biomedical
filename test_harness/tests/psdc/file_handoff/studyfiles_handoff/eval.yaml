@@ -1,0 +1,7 @@
+checks:
+  - substring_all: ["PBCS_Data_Dictionary_PSDC_Core_Variables", "Open Access"]
+  - regex: 'drs://nci-crdc\.datacommons\.io/dg\.4DFC/[0-9a-f-]+'
+  - substring: "6b9c5c3c-8a04-5700-b9a6-65cca3e6c65b"
+  - substring_any: ["not applicable", "no dbgap", "no dbGaP accession"]
+  - must_not_contain: ["serves participant-level", "download the participant data from the API", "phs"]
+  - behavior: "reported PBCS dbgap_accession_id verbatim (\"Not Applicable\") instead of inventing a phs accession"

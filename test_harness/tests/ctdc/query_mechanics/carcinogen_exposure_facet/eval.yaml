@@ -1,0 +1,12 @@
+checks:
+  - number:
+      name: "carcinogen_exposure_yes"
+      target: 25
+      tolerance_absolute: 3
+  - number:
+      name: "carcinogen_exposure_unknown"
+      target: 125
+      tolerance_percent: 10
+  - substring: "25"
+  - behavior: "used the `Yes` bucket / `carcinogen_exposure: [\"Yes\"]`, not `Unknown` or a sum"
+  - must_not_contain: ["125 participants have a recorded", "90 participants were exposed"]

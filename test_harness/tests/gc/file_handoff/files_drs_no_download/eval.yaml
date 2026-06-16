@@ -1,0 +1,8 @@
+checks:
+  - regex: 'dg\.4DFC/[0-9a-f-]+'
+  - substring_any: ["drs://nci-crdc.datacommons.io", "drs_uri"]
+  - substring_all: ["Controlled", "dbGaP"]
+  - substring_any: ["Cancer Genomics Cloud", "CGC", "Velsera"]
+  - substring: "[\"phs001714\"]"
+  - must_not_contain: ["signed url", "signedUrl", "direct download", "download link"]
+  - behavior: "described the file_id/drs_uri as a DRS identifier resolved via a CGC manifest, not as an HTTP URL to GET"

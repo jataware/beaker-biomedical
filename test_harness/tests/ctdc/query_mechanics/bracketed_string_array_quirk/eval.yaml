@@ -1,0 +1,11 @@
+checks:
+  - count_at_least:
+      name: "colorectal_rows"
+      min: 45
+  - set_contains:
+      name: "MSB-01627_therapies"
+      members: ["Cetuximab", "Bevacizumab"]
+  - substring_any: ["MSB-01627", "MSB-01771", "MSB-00952"]
+  - behavior: "parsed the bracketed `targeted_therapy` string into a list (stripped `[]`, split on `, `)"
+  - behavior: "paged past the default `first: 10` to retrieve the full ~50-row cohort"
+  - must_not_contain: ["[Cetuximab, Bevacizumab]"]

@@ -1,0 +1,8 @@
+checks:
+  - number:
+      name: "cisplatin_subjects"
+      target: 1168
+      tolerance_percent: 15
+  - substring: "Cisplatin"
+  - behavior: "used the therapeutic_agent column (discovered via column_values), not an invented drug/treatment column"
+  - must_not_contain: ["1270", "1,270"]

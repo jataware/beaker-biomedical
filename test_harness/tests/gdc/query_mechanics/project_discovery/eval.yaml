@@ -1,0 +1,22 @@
+checks:
+  - set_contains:
+      name: "discovered_projects"
+      members: ["TARGET-WT", "TCGA-KIRC", "FM-AD", "CPTAC-3"]
+  - count_at_least:
+      name: "projects"
+      min: 10
+  - number:
+      name: "total_kidney_cases"
+      target: 2436
+      tolerance_percent: 15
+  - number:
+      name: "TARGET_WT_cases"
+      target: 652
+      tolerance_percent: 15
+  - number:
+      name: "TCGA_KIRC_cases"
+      target: 537
+      tolerance_percent: 15
+  - substring: "TARGET-WT"
+  - behavior: "faceted /cases by project.project_id with a primary_site=Kidney filter (discover-then-query), did NOT assume a single project"
+  - must_not_contain: ["only TCGA", "kidney cancer is exclusively in TCGA"]

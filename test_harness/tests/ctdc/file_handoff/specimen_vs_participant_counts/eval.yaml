@@ -1,0 +1,20 @@
+checks:
+  - number:
+      name: "total_specimens"
+      target: 1140
+      tolerance_percent: 5
+  - number:
+      name: "edta_blood_specimens"
+      target: 341
+      tolerance_percent: 10
+  - number:
+      name: "vcf_files"
+      target: 85
+      tolerance_percent: 15
+  - regex:
+      name: "returned DRS id"
+      pattern: '(?i)dg\.4DFC/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+  - substring_any: ["drs://nci-crdc.datacommons.io", "ga4gh/drs", "cancer genomics cloud", "CGC"]
+  - behavior: "described specimen/file counts as per-specimen/per-file, distinct from the 248 participants"
+  - must_not_contain: ["341 participants", "341 patients", "1140 participants", "1140 patients"]
+  - must_not_contain: ["downloaded the file via the api", "graphql endpoint returns the file bytes", "signedUrl"]

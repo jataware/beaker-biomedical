@@ -114,8 +114,8 @@ worked examples. Each prompt embeds a known trap (e.g. value casing, wrong-commo
 null responses) and a gradeable outcome.
 
 Test suites live in [`test_harness/tests/`](test_harness/tests/) — **one directory per external service**,
-split into category folders, with one directory per test (`test.md` = prompt, `eval.md` = verified
-ground truth plus machine-gradeable **`# Automated Checks`** YAML: substring / number-with-tolerance /
+split into category folders, with one directory per test (`test.md` = prompt, `rationale.md` = verified
+ground-truth rationale, `eval.yaml` = machine-gradeable checks: substring / number-with-tolerance /
 set-membership / regex / behavioral assertions), so the corpus is authoritative for the code test suite:
 
 - **[`test_harness/tests/cda/`](test_harness/tests/cda/)**: CDA (`cancer-data-aggregator`) — core query mechanics, file-modality → correct hand-off, full locate→analyze round-trips, and out-of-scope requests the agent should decline.

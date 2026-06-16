@@ -1,0 +1,6 @@
+checks:
+  - substring_all: ["genomic-data-commons", "GDC", "phs001524"]
+  - substring_any: ["Genomics", "study_data_types"]
+  - must_not_contain: ["mutationFrequency", "ssms("]
+  - behavior: "redirected somatic-mutation-frequency analysis to GDC rather than computing it from GC (GC was used only to confirm the study is Genomics)"
+  - behavior: "reported that GC returns metadata only and has no mutation-frequency field, rather than fabricating one"

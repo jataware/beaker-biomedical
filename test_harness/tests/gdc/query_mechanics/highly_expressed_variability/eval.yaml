@@ -1,0 +1,11 @@
+checks:
+  - set_contains:
+      name: "top_genes"
+      members: ["SFTPC", "SFTPA1", "SFTPA2"]
+  - substring_any: ["SFTPC", "SFTPA1", "SFTPA2", "PGC", "SCGB3A2"]
+  - count_at_least:
+      name: "genes_returned"
+      min: 5
+  - substring_any: ["variab", "standard deviation", "stddev", "most variably expressed"]
+  - behavior: "called /gene_expression/gene_selection with gene_type=protein_coding (ranked by stddev), not absolute-level from /gene_expression/values"
+  - must_not_contain: ["absolute abundance", "absolute expression level"]

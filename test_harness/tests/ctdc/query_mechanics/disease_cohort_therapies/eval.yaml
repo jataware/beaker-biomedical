@@ -1,0 +1,16 @@
+checks:
+  - number:
+      name: "colorectal_participants"
+      target: 50
+      tolerance_absolute: 3
+  - number:
+      name: "bevacizumab_in_cohort"
+      target: 33
+      tolerance_percent: 15
+  - set_contains:
+      name: "cohort_targeted_therapies"
+      members: ["Bevacizumab", "Panitumumab"]
+  - substring: "colorectal carcinoma"
+  - behavior: "applied the `ctep_disease_term` filter (cohort-scoped) before reading therapies"
+  - must_not_contain: ["no colorectal", "0 participants", "not present in ctdc"]
+  - must_not_contain: ["Bortezomib", "Lenalidomide"]

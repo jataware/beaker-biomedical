@@ -1,0 +1,9 @@
+checks:
+  - regex:
+      name: "drs_id"
+      pattern: 'dg\.4DFC/[0-9a-f-]{36}'
+  - substring_any: ["UBC01-793-142-Vm30", ".bam", ".bai"]
+  - substring_any: ["createManifest", "drs_uri", "Cancer Genomics Cloud", "CGC", "nci-crdc.datacommons.io"]
+  - substring_any: ["Open", "acl"]
+  - behavior: "resolved the DRS id via fileDetail/fileInfo (not from the raw file node)"
+  - must_not_contain: ["download the bytes from the API", "the API returns the file contents", "GraphQL response contains the file data", "streamed the file"]

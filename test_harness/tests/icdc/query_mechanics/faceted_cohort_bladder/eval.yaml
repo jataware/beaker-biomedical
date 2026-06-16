@@ -1,0 +1,21 @@
+checks:
+  - number:
+      name: "bladder_cases"
+      target: 116
+      tolerance_percent: 15
+  - number:
+      name: "bladder_studies"
+      target: 5
+      tolerance_absolute: 1
+  - substring_all: ["Scottish Terrier", "Bladder"]
+  - set_contains:
+      name: "studies"
+      members: ["UBC02", "UBC01"]
+  - count_at_least:
+      name: "listed_case_ids"
+      min: 3
+  - regex:
+      name: "case_id"
+      pattern: '(UBC0[123]-|TCL01-|ORGANOIDS01-)\S+'
+  - behavior: "fed searchCases counts/IDs into caseOverview (or casesInList) to produce rows"
+  - must_not_contain: ["subjects"]

@@ -1,0 +1,21 @@
+checks:
+  - number:
+      name: "cohort_denominator"
+      target: 428
+      tolerance_percent: 10
+  - number:
+      name: "APC_pct"
+      target: 72
+      tolerance_pp: 8
+  - number:
+      name: "TP53_pct"
+      target: 55
+      tolerance_pp: 8
+  - number:
+      name: "KRAS_pct"
+      target: 43
+      tolerance_pp: 8
+  - substring_all: ["APC", "TP53", "KRAS"]
+  - substring_any: ["cancer gene census", "gene census", "census", "census-only"]
+  - behavior: "scoped the COAD cohort in case_filters and put genes.is_cancer_gene_census=\"true\" in filters (NOT cohort in filters)"
+  - must_not_contain: ["1.68%", "1.7%", "18289", "18,289"]

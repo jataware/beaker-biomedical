@@ -1,0 +1,9 @@
+checks:
+  - number:
+      name: "urinary_bladder_cases"
+      target: 0
+      exact: true
+  - substring_any: ["Bladder, Urethra", "\"Bladder\"", "Bladder (51", "51 cases"]
+  - behavior: "read caseCountByDiseaseSite to enumerate valid disease_site values before reconcluding"
+  - behavior: "re-ran the query with a valid value and returned a non-empty cohort (≈51 Bladder, or 116 via diagnosis)"
+  - must_not_contain: ["no bladder data", "ICDC does not have", "no such cases exist", "ICDC has no bladder"]

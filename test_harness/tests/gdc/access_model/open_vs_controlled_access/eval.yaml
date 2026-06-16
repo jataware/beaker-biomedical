@@ -1,0 +1,12 @@
+checks:
+  - number:
+      name: "open_files"
+      target: 4971
+      tolerance_percent: 15
+  - number:
+      name: "controlled_files"
+      target: 7882
+      tolerance_percent: 15
+  - substring_all: ["open", "controlled"]
+  - behavior: "filtered files by files.access (open vs controlled) for TCGA-PAAD"
+  - must_not_contain: ["all files are open", "everything requires a token", "all data requires controlled access"]

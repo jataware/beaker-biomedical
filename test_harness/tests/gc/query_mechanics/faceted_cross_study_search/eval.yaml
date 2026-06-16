@@ -1,0 +1,15 @@
+checks:
+  - substring: "[\"Medulloblastoma, NOS\"]"
+  - number:
+      name: "distinct_subjects"
+      target: 1226
+      tolerance_percent: 15
+  - count_at_least:
+      name: "studies"
+      min: 6
+  - set_contains:
+      name: "studies"
+      members: ["phs002790", "phs002517", "phs001437"]
+  - behavior: "read facet buckets via the \"subjects\" field, not \"count\" (no FieldUndefined error)"
+  - behavior: "discovered the diagnosis value from subjectCountByPrimaryDiagnosis rather than guessing (did not report 0/empty)"
+  - behavior: "distinguished the record-counted bucket total (~12934) from the distinct subject count (~1226) — did not present 12934 as a clean patient count"

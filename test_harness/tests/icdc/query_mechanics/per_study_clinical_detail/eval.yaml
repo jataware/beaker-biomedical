@@ -1,0 +1,14 @@
+checks:
+  - number:
+      name: "ubc01_cases"
+      target: 38
+      tolerance_percent: 10
+  - number:
+      name: "ubc01_files"
+      target: 170
+      tolerance_percent: 15
+  - substring_any: ["best response", "Partial Response", "Stable Disease"]
+  - substring: "Vemurafenib"
+  - behavior: "probed clinicalDataNodeCounts (or the *NodeData queries) and reported the event nodes as empty/not-loaded"
+  - behavior: "framed the empty visit/cycle/adverse_event result as expected, not as an error or a retry loop"
+  - must_not_contain: ["adverse events recorded for UBC01", "visit records for UBC01", "treatment cycles for UBC01"]

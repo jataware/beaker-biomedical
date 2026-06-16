@@ -1,0 +1,11 @@
+checks:
+  - substring: "dbe94609-1fb3-11e9-b7f8-0a80fada099c"
+  - behavior: "resolved pdc_study_id → version-specific study_id via studyCatalog (is_latest_version=\"yes\"); did NOT pass pdc_study_id where study_id is required, nor a stale version UUID"
+  - substring_any: ["signedUrl", "signed URL", "presigned", "s3"]
+  - behavior: "computed the downloaded file's md5 and compared it to the returned md5sum"
+  - behavior: "handled at least one transient null payload (HTTP 200 {\"data\": null} or nested pagination:null) by retrying, did not crash"
+  - number:
+      name: "peptide_spectral_matches_open_standard_files"
+      target: 575
+      tolerance_percent: 15
+  - must_not_contain: ["7-day URL has not expired", "reused the cached signed URL"]

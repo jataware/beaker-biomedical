@@ -1,0 +1,19 @@
+checks:
+  - number:
+      name: "biospecimen_yes_studies"
+      target: 3
+      tolerance_absolute: 0
+  - number:
+      name: "breast_studies"
+      target: 2
+      tolerance_absolute: 0
+  - number:
+      name: "lung_studies"
+      target: 2
+      tolerance_absolute: 0
+  - set_contains:
+      name: "biospecimen_studies"
+      members: ["NLST", "PLCO", "PBCS"]
+  - substring_any: ["number of studies", "studies, not", "counts studies", "study count"]
+  - must_not_contain: ["3 participants collected", "2 breast cancer patients", "2 patients with lung"]
+  - behavior: "used searchStudies studyCountBy*/filterStudyCountBy* facets and interpreted subjects as a study count"

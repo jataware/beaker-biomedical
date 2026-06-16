@@ -1,0 +1,4 @@
+checks:
+  - behavior: "stated CDA holds no abundance/expression values; routed protein abundance to proteomic-data-commons"
+  - substring_any: ["no abundance", "no expression", "metadata", "proteomic-data-commons"]
+  - must_not_contain: ["abundance column", "expression column", "EGFR abundance is"]
