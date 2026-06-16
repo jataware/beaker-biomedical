@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "beaker-biomedical-test-harness"
 version = "0.1.0"
-description = "Evaluation harness for the NCI CRDC agent skills (queries_md answer keys, unified LiteLLM engine)."
+description = "Evaluation harness for the NCI CRDC agent skills (tests/ answer keys, unified LiteLLM engine)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -17,6 +17,8 @@ dependencies = [
   # provider (Anthropic / OpenAI / Gemini natively, everything else via
   # OpenRouter) is reached through litellm with one OpenAI-style tool-calling loop.
   "litellm>=1.89",
+  # eval.md answer keys are YAML-backed (the parser reads each test's checks block).
+  "pyyaml>=6.0",
   # Libraries the skills' own example code imports (so a failure reflects the
   # skill, not a missing dependency).
   "requests>=2.31",
@@ -37,7 +39,7 @@ skill-harness = "harness.cli:main"
 packages = ["harness"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["unit"]
 pythonpath = ["."]
 addopts = "-ra"
 markers = [

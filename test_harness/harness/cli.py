@@ -12,7 +12,7 @@ Dry-run a selection — assemble prompts and show the checks, but call nothing::
 
 Run two GDC queries comparing two models, write a JSON report::
 
-    python -m harness.cli run --query gdc:Q1,gdc:Q2 \
+    python -m harness.cli run --query gdc:project_discovery,gdc:survival_logrank \
         --model claude-sonnet-4-6,qwen/qwen3-coder-next -o report.json
 
 Run the whole suite on a single model (explicit opt-in)::
@@ -49,9 +49,9 @@ def _split_csv(val: str | None) -> list[str] | None:
 
 
 def cmd_list(args) -> int:
-    config = HarnessConfig(queries_dir=Path(args.queries_dir))
+    config = HarnessConfig(tests_dir=Path(args.tests_dir))
     queries = select_queries(
-        config.queries_dir,
+        config.tests_dir,
         services=_split_csv(args.service),
         qids=_split_csv(args.query),
     )
@@ -64,7 +64,7 @@ def cmd_list(args) -> int:
         for q in qs:
             nc = len(q.checks)
             total_checks += nc
-            print(f"  {q.ref:12s} {nc:2d} checks  — {q.title}")
+            print(f"  {q.qid:42s} {nc:2d} checks  — {q.title}")
             if args.checks:
                 for c in q.checks:
                     print(f"        · {c.type}: {c.spec}")
@@ -98,10 +98,10 @@ def cmd_run(args) -> int:
         use_judge=not args.no_judge,
         timeout=args.timeout,
         verbose=args.verbose,
-        queries_dir=Path(args.queries_dir),
+        tests_dir=Path(args.tests_dir),
     )
 
-    queries = select_queries(config.queries_dir, services=services, qids=qids)
+    queries = select_queries(config.tests_dir, services=services, qids=qids)
     if not queries:
         raise SystemExit("No queries matched the selection.")
 
@@ -205,15 +205,16 @@ def cmd_compare(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="harness", description="Evaluate CRDC agent skills against the queries_md answer keys."
+        prog="harness", description="Evaluate CRDC agent skills against the tests/ answer keys."
     )
-    p.add_argument("--queries-dir", default=str(HarnessConfig().queries_dir),
-                   help="directory of *_test.md files")
+    p.add_argument("--tests-dir", default=str(HarnessConfig().tests_dir),
+                   help="root of the tests/<service>/<category>/<test>/ corpus")
     sub = p.add_subparsers(dest="command", required=True)
 
     pl = sub.add_parser("list", help="list parsed queries/checks (no API)")
     pl.add_argument("--service", help="comma list: gdc,pdc,cda,gc,icdc,ctdc,psdc")
-    pl.add_argument("--query", help="comma list of refs/qids: gdc:Q1,A1")
+    pl.add_argument("--query", help="comma list of refs/qids/slugs: "
+                    "cda:core_query_mechanics/discovery, discovery")
     pl.add_argument("--checks", action="store_true", help="show each check")
     pl.set_defaults(func=cmd_list)
 

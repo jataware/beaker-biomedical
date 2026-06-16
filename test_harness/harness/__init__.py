@@ -1,9 +1,9 @@
 """Agent-skill evaluation harness.
 
-Parses the authoritative ``queries_md/*_test.md`` benchmark files, runs each
+Parses the ``tests/<service>/<category>/<test>/`` benchmark corpus, runs each
 natural-language prompt through a configurable model (via one unified LiteLLM
 ReAct engine, with the matching CRDC skill loaded), and grades the answer
-against the machine-gradeable ``Checks`` blocks.
+against the machine-gradeable ``# Automated Checks`` YAML in each ``eval.md``.
 """
 
 __all__ = ["__version__"]

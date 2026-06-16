@@ -51,16 +51,27 @@ class Suite:
     results: list[RunResult] = field(default_factory=list)
 
 
+def _qid_matches(q: Query, qid_filter: set[str]) -> bool:
+    """A filter token selects a query if it equals its full ref
+    (``cda:core_query_mechanics/discovery``), its qid
+    (``core_query_mechanics/discovery``), its leaf slug (``discovery``), or
+    ``<service>:<leaf>`` (``cda:discovery``)."""
+    candidates = {q.ref.lower(), q.qid.lower(), q.leaf.lower(),
+                  f"{q.service}:{q.leaf}".lower()}
+    return bool(candidates & qid_filter)
+
+
 def select_queries(
-    queries_dir,
+    tests_dir,
     services: Optional[list[str]] = None,
     qids: Optional[list[str]] = None,
 ) -> list[Query]:
     """Flatten parsed queries, optionally filtered by service and/or qid.
 
-    ``qids`` accepts bare ids ("Q1", "A1") or "service:qid" refs ("gdc:Q1").
+    ``qids`` accepts full refs ("cda:core_query_mechanics/discovery"), bare qids
+    ("core_query_mechanics/discovery"), or leaf slugs ("discovery").
     """
-    allq = parse_all(queries_dir)
+    allq = parse_all(tests_dir)
     selected: list[Query] = []
     qid_filter = {q.lower() for q in qids} if qids else None
     svc_filter = {s.lower() for s in services} if services else None
@@ -68,10 +79,8 @@ def select_queries(
         if svc_filter and svc.lower() not in svc_filter:
             continue
         for q in qs:
-            if qid_filter is not None:
-                if (q.qid.lower() not in qid_filter
-                        and q.ref.lower() not in qid_filter):
-                    continue
+            if qid_filter is not None and not _qid_matches(q, qid_filter):
+                continue
             selected.append(q)
     return selected
 
@@ -151,7 +160,7 @@ def run_suite(
     on_start: Optional[Callable[[Query, str, int, int], None]] = None,
     on_done: Optional[Callable[[RunResult, int, int], None]] = None,
 ) -> Suite:
-    queries = select_queries(config.queries_dir, services=services, qids=qids)
+    queries = select_queries(config.tests_dir, services=services, qids=qids)
     pairs = [(query, model) for model in models for query in queries]
     suite = Suite(config=config)
     total = len(pairs)

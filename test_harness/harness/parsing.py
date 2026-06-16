@@ -1,13 +1,21 @@
-"""Parse the authoritative ``queries_md/*_test.md`` benchmark files.
+"""Parse the ``tests/`` benchmark corpus into :class:`Query` / :class:`Check` objects.
 
-Two layouts are supported with one code path:
+Layout (one directory per test)::
 
-* ``## Query N — title`` with a ``**Prompt:**`` line followed by ``>`` blockquote
-  lines (gdc / pdc / gc / icdc / ctdc / psdc).
-* ``### A1 — title`` with an inline ``> **Prompt:** "..."`` line (cda).
+    tests/<service>/<category>/<test>/
+        test.md   — YAML frontmatter (name, description) then the prompt (everything else)
+        eval.md   — free prose under ``# Expect`` / ``# Failure Cases`` plus a fenced
+                    ```yaml block under ``# Automated Checks`` (the only machine-read part)
 
-Each query carries a ``Checks (machine-gradeable):`` block of inline-code check
-tokens (`` `type: spec` ``); a single bullet may hold more than one token.
+Each check in that YAML block is a single-key map keyed by its check type::
+
+    checks:
+      - number: {name: deceased_subjects, target: 8556, tolerance_percent: 15}
+      - behavior: called column_values('vital_status') before filtering
+      - substring_any: [dead, deceased]
+      - set_contains: {name: top_genes, members: [TP53, CDKN2A]}
+
+A test's ``qid`` is its ``<category>/<test>`` path; its ``ref`` is ``<service>:<qid>``.
 """
 
 from __future__ import annotations
@@ -16,7 +24,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Longest type names first so the alternation is unambiguous.
+import yaml
+
 CHECK_TYPES = (
     "substring_all",
     "substring_any",
@@ -29,32 +38,26 @@ CHECK_TYPES = (
     "regex",
 )
 
-_HEADING_RE = re.compile(r"^(#{2,4})\s+(.*?)\s*#*\s*$")
-_PROMPT_RE = re.compile(r"\*\*Prompt:\*\*", re.IGNORECASE)
-_CHECKS_MARKER_RE = re.compile(r"Checks\s*\(machine-gradeable\)\s*:", re.IGNORECASE)
-
-_TYPE_ALT = "(?:" + "|".join(CHECK_TYPES) + r")"
-# Two token spellings appear in the suites:
-#   X-style (most files):  `type: spec`         — colon + spec INSIDE the backticks
-#   Y-style (ctdc):        `type`: spec          — colon + spec AFTER the backticks
-# A single bullet line may carry more than one token, joined by "and".
-_CHECK_TOKEN_RE = re.compile(
-    r"`\s*(?P<type>" + _TYPE_ALT + r")\b"
-    r"(?:\s*:\s*(?P<inside>[^`\n]*))?"                 # X-style spec (inside)
-    r"\s*`"
-    r"(?:\s*:\s*(?P<outside>[^\n]*?)"                  # Y-style spec (outside)
-    r"(?=\s*$|(?:\s+and\b)?\s+`\s*" + _TYPE_ALT + r"\b))?",
-    re.MULTILINE,
-)
+_YAML_FENCE_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL)
 
 
 @dataclass
 class Check:
-    """One backtick-wrapped, objectively decidable assertion."""
+    """One objectively decidable assertion, loaded from the eval YAML.
+
+    ``params`` carries the structured fields the grader reads directly (no
+    re-parsing): string types -> ``{"items": [...]}``; ``regex`` ->
+    ``{"pattern", "name"}``; ``number`` -> ``{"name", "target", "tol_abs"}``;
+    ``set_contains`` -> ``{"name", "members"}``; ``count_at_least`` ->
+    ``{"name", "min"}``; ``behavior`` -> ``{}``. ``spec`` is a human-readable
+    rendering (shown in reports; for ``behavior``/``count_at_least`` it is also
+    what the LLM judge reads).
+    """
 
     type: str
-    spec: str           # text after ``type:`` (inside the backticks)
-    raw: str            # the full ``type: spec`` string
+    spec: str
+    params: dict = field(default_factory=dict)
+    raw: str = ""
 
     def __str__(self) -> str:
         return f"{self.type}: {self.spec}"
@@ -65,132 +68,146 @@ class Query:
     """A single benchmark prompt with its expected-outcome checks."""
 
     service: str        # e.g. "gdc"
-    qid: str            # e.g. "Q1" or "A1"
-    title: str          # full heading text
+    qid: str            # e.g. "core_query_mechanics/discovery"
+    title: str          # frontmatter `name`
     prompt: str         # the natural-language task
     checks: list[Check] = field(default_factory=list)
+    description: str = ""
     source_file: Path | None = None
-    lineno: int = 0
+    lineno: int = 1
 
     @property
     def ref(self) -> str:
         return f"{self.service}:{self.qid}"
 
-
-def _qid_from_heading(text: str) -> str:
-    m = re.match(r"Query\s+(\d+)", text, re.IGNORECASE)
-    if m:
-        return f"Q{m.group(1)}"
-    m = re.match(r"([A-Z]+\d+)\b", text)
-    if m:
-        return m.group(1)
-    slug = re.sub(r"[^A-Za-z0-9]+", "-", text.strip()).strip("-")
-    return slug[:24] or "Q?"
+    @property
+    def leaf(self) -> str:
+        return self.qid.rsplit("/", 1)[-1]
 
 
-def _extract_prompt(section_lines: list[str]) -> str:
-    """Pull the prompt out of a query section.
-
-    Handles both the ``**Prompt:**`` / following-``>``-lines layout and the
-    inline ``> **Prompt:** "..."`` layout.
-    """
-    for i, line in enumerate(section_lines):
-        if not _PROMPT_RE.search(line):
-            continue
-        # Text after the marker on the same line (drop a leading ``>``).
-        after = _PROMPT_RE.split(line, maxsplit=1)[1]
-        after = after.lstrip(">").strip()
-        parts = [after] if after else []
-        # Consume following blockquote-continuation lines.
-        for cont in section_lines[i + 1:]:
-            stripped = cont.strip()
-            if stripped.startswith(">"):
-                parts.append(stripped.lstrip(">").strip())
-            elif not parts:
-                # Marker line was bare and the next line isn't a blockquote;
-                # nothing to continue with.
-                break
-            else:
-                break
-        prompt = " ".join(p for p in parts if p).strip()
-        return _strip_quotes(prompt)
-    return ""
+# --------------------------------------------------------------------------- #
+# building a Check from one YAML item
+# --------------------------------------------------------------------------- #
+def _as_list(val) -> list[str]:
+    if isinstance(val, (list, tuple)):
+        return [str(x) for x in val]
+    return [str(val)]
 
 
-def _strip_quotes(text: str) -> str:
-    text = text.strip()
-    pairs = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"))
-    for lo, hi in pairs:
-        if len(text) >= 2 and text.startswith(lo) and text.endswith(hi):
-            return text[1:-1].strip()
-    return text
+def _tol_abs(target: float, val: dict) -> float:
+    if val.get("exact"):
+        return 0.0
+    if "tolerance_percent" in val:
+        return abs(target) * float(val["tolerance_percent"]) / 100.0
+    if "tolerance_pp" in val:
+        return float(val["tolerance_pp"])
+    if "tolerance_absolute" in val:
+        return float(val["tolerance_absolute"])
+    return 0.0
 
 
-def _extract_checks(section_lines: list[str]) -> list[Check]:
-    # Collect from the Checks marker to the end of the section.
-    start = None
-    for i, line in enumerate(section_lines):
-        if _CHECKS_MARKER_RE.search(line):
-            start = i
-            break
-    if start is None:
-        return []
-    blob = "\n".join(section_lines[start:])
-    checks: list[Check] = []
-    for m in _CHECK_TOKEN_RE.finditer(blob):
-        ctype = m.group("type")
-        inside, outside = m.group("inside"), m.group("outside")
-        spec = (inside if inside not in (None, "") else (outside or "")).strip()
-        # Drop a trailing "and" left by the multi-token-per-line lookahead.
-        spec = re.sub(r"\s+and\s*$", "", spec).strip()
-        checks.append(Check(type=ctype, spec=spec, raw=f"{ctype}: {spec}"))
-    return checks
+def check_from_item(item: dict) -> Check:
+    if not isinstance(item, dict) or len(item) != 1:
+        raise ValueError(f"each check must be a single-key map, got: {item!r}")
+    ctype, val = next(iter(item.items()))
+    if ctype not in CHECK_TYPES:
+        raise ValueError(f"unknown check type {ctype!r}")
+
+    if ctype == "substring":
+        items = [str(val)]
+        return Check(ctype, str(val), {"items": items}, raw=f"{ctype}: {val}")
+
+    if ctype in ("substring_any", "substring_all", "must_not_contain"):
+        items = _as_list(val)
+        return Check(ctype, ", ".join(items), {"items": items},
+                     raw=f"{ctype}: {items}")
+
+    if ctype == "regex":
+        if isinstance(val, dict):
+            pattern, name = str(val["pattern"]), str(val.get("name", ""))
+        else:
+            pattern, name = str(val), ""
+        spec = f"{name} matches {pattern}".strip() if name else pattern
+        return Check(ctype, spec, {"pattern": pattern, "name": name}, raw=spec)
+
+    if ctype == "number":
+        name = str(val["name"])
+        target = float(val["target"])
+        tol = _tol_abs(target, val)
+        spec = f"{name} ≈ {target:g} (±{tol:g})" if tol else f"{name} == {target:g}"
+        return Check(ctype, spec, {"name": name, "target": target, "tol_abs": tol},
+                     raw=spec)
+
+    if ctype == "set_contains":
+        name, members = str(val["name"]), _as_list(val["members"])
+        spec = f"{name} ⊇ {{{', '.join(members)}}}"
+        return Check(ctype, spec, {"name": name, "members": members}, raw=spec)
+
+    if ctype == "count_at_least":
+        name, n = str(val["name"]), int(val["min"])
+        spec = f"{name} ≥ {n}"
+        return Check(ctype, spec, {"name": name, "min": n}, raw=spec)
+
+    # behavior
+    return Check(ctype, str(val), {}, raw=f"{ctype}: {val}")
 
 
-def service_from_filename(path: Path) -> str:
-    name = path.stem  # e.g. "gdc_test"
-    return name[:-5] if name.endswith("_test") else name
-
-
-def parse_query_file(path: Path) -> list[Query]:
-    path = Path(path)
-    service = service_from_filename(path)
-    lines = path.read_text(encoding="utf-8").splitlines()
-
-    # Index heading positions.
-    headings: list[tuple[int, str]] = []
-    for i, line in enumerate(lines):
-        m = _HEADING_RE.match(line)
+# --------------------------------------------------------------------------- #
+# reading test.md / eval.md
+# --------------------------------------------------------------------------- #
+def _split_frontmatter(text: str) -> tuple[dict, str]:
+    """Return (frontmatter dict, body). Frontmatter is a leading ``---`` block."""
+    if text.startswith("---"):
+        m = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", text, re.DOTALL)
         if m:
-            headings.append((i, m.group(2).strip()))
+            meta = yaml.safe_load(m.group(1)) or {}
+            return (meta if isinstance(meta, dict) else {}), m.group(2)
+    return {}, text
 
+
+def _checks_from_eval(eval_text: str) -> list[Check]:
+    m = _YAML_FENCE_RE.search(eval_text)
+    if not m:
+        return []
+    data = yaml.safe_load(m.group(1)) or {}
+    items = data.get("checks", []) if isinstance(data, dict) else []
+    return [check_from_item(it) for it in items]
+
+
+def parse_test(test_dir: Path, service: str, qid: str) -> Query:
+    test_dir = Path(test_dir)
+    meta, body = _split_frontmatter((test_dir / "test.md").read_text(encoding="utf-8"))
+    eval_md = test_dir / "eval.md"
+    checks = _checks_from_eval(eval_md.read_text(encoding="utf-8")) if eval_md.exists() else []
+    return Query(
+        service=service,
+        qid=qid,
+        title=str(meta.get("name") or qid),
+        prompt=body.strip(),
+        checks=checks,
+        description=str(meta.get("description") or ""),
+        source_file=test_dir / "test.md",
+    )
+
+
+def parse_service(service_dir: Path) -> list[Query]:
+    """Every test under ``tests/<service>/`` (any dir containing a ``test.md``)."""
+    service_dir = Path(service_dir)
+    service = service_dir.name
     queries: list[Query] = []
-    for idx, (lineno, text) in enumerate(headings):
-        end = headings[idx + 1][0] if idx + 1 < len(headings) else len(lines)
-        section = lines[lineno:end]
-        if not any(_PROMPT_RE.search(s) for s in section):
-            continue
-        prompt = _extract_prompt(section)
-        if not prompt:
-            continue
-        checks = _extract_checks(section)
-        queries.append(
-            Query(
-                service=service,
-                qid=_qid_from_heading(text),
-                title=text,
-                prompt=prompt,
-                checks=checks,
-                source_file=path,
-                lineno=lineno + 1,
-            )
-        )
+    for test_md in sorted(service_dir.rglob("test.md")):
+        qid = test_md.parent.relative_to(service_dir).as_posix()
+        queries.append(parse_test(test_md.parent, service, qid))
     return queries
 
 
-def parse_all(queries_dir: Path) -> dict[str, list[Query]]:
-    """service -> [Query], for every ``*_test.md`` under ``queries_dir``."""
+def parse_all(tests_dir: Path) -> dict[str, list[Query]]:
+    """service -> [Query], for every ``<service>/`` subdir of ``tests_dir``."""
     out: dict[str, list[Query]] = {}
-    for path in sorted(Path(queries_dir).glob("*_test.md")):
-        out[service_from_filename(path)] = parse_query_file(path)
+    for service_dir in sorted(Path(tests_dir).iterdir()):
+        if not service_dir.is_dir() or service_dir.name.startswith((".", "_")):
+            continue
+        qs = parse_service(service_dir)
+        if qs:
+            out[service_dir.name] = qs
     return out

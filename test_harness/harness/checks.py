@@ -14,7 +14,6 @@ Two families of check:
 
 from __future__ import annotations
 
-import ast
 import re
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -32,11 +31,6 @@ SEMANTIC_TYPES = {"behavior", "count_at_least"}
 Judge = Callable[[Check, Query, str, str], "tuple[Optional[bool], str]"]
 
 _NUM_TOKEN_RE = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?")
-_NUM_SPEC_RE = re.compile(
-    r"^\s*(?P<name>.+?)\s*(?P<op>≈|==|=|~|≥|>=|≤|<=)\s*"
-    r"(?P<val>[-+]?[\d,]*\.?\d+)\s*(?P<pct>%)?\s*"
-    r"(?:\(\s*±\s*(?P<tol>[\d.]+)\s*(?P<tolunit>pp|%)?\s*\)\s*)?$"
-)
 
 
 @dataclass
@@ -52,43 +46,8 @@ class CheckResult:
 
 
 # --------------------------------------------------------------------------- #
-# spec helpers
+# deterministic grading  (reads the structured ``check.params`` directly)
 # --------------------------------------------------------------------------- #
-def _strip_explanation(spec: str) -> str:
-    """Drop a trailing ``— explanation`` (only the structured types need this;
-    harmless for the inside-backtick spellings, which never carry one)."""
-    return re.split(r"\s+[—–]\s+", spec, maxsplit=1)[0].strip()
-
-
-def _parse_list(spec: str) -> list[str]:
-    spec = spec.strip()
-    start, end = spec.find("["), spec.rfind("]")
-    if start != -1 and end != -1:
-        spec = spec[start:end + 1]
-    try:
-        val = ast.literal_eval(spec)
-        if isinstance(val, (list, tuple)):
-            return [str(x) for x in val]
-    except (ValueError, SyntaxError):
-        pass
-    # Fallback: pull quoted strings.
-    return [a or b for a, b in re.findall(r'"([^"]*)"|\'([^\']*)\'', spec)]
-
-
-def _parse_set(spec: str) -> list[str]:
-    m = re.search(r"\{(.*)\}", spec, re.DOTALL)
-    body = m.group(1) if m else spec.split("⊇", 1)[-1]
-    return [tok.strip() for tok in body.split(",") if tok.strip()]
-
-
-def _parse_regex_pattern(spec: str) -> str:
-    spec = _strip_explanation(spec).strip()
-    m = re.search(r"\bmatch(?:es)?\b", spec)
-    if m:
-        spec = spec[m.end():].strip()
-    return spec.strip().strip("`").strip()
-
-
 def _numbers_in(text: str) -> list[float]:
     out = []
     for tok in _NUM_TOKEN_RE.findall(text):
@@ -99,40 +58,18 @@ def _numbers_in(text: str) -> list[float]:
     return out
 
 
-def parse_number_spec(spec: str) -> Optional[dict]:
-    spec = _strip_explanation(spec)
-    m = _NUM_SPEC_RE.match(spec)
-    if not m:
-        return None
-    value = float(m.group("val").replace(",", ""))
-    op = m.group("op")
-    tol_raw, tolunit = m.group("tol"), m.group("tolunit")
-    if tol_raw is None:
-        tol_abs = 0.0
-    else:
-        tol = float(tol_raw)
-        if tolunit == "%":
-            tol_abs = abs(value) * tol / 100.0
-        else:  # "pp" or bare ±N
-            tol_abs = tol
-    return {"name": m.group("name").strip(), "op": op, "value": value, "tol_abs": tol_abs}
-
-
-# --------------------------------------------------------------------------- #
-# deterministic grading
-# --------------------------------------------------------------------------- #
 def _grade_deterministic(check: Check, answer: str) -> CheckResult:
-    t, spec = check.type, check.spec
+    t, p = check.type, check.params
     hay = answer.lower()
 
     if t == "substring":
-        needle = _strip_explanation(spec).strip().strip('"').strip("'")
+        needle = p["items"][0]
         ok = needle.lower() in hay
         return CheckResult(check, ok, "deterministic",
                            f"{'found' if ok else 'missing'}: {needle!r}")
 
     if t in ("substring_any", "substring_all", "must_not_contain"):
-        items = _parse_list(spec)
+        items = p["items"]
         present = [s for s in items if s.lower() in hay]
         if t == "substring_any":
             ok = len(present) > 0
@@ -147,13 +84,13 @@ def _grade_deterministic(check: Check, answer: str) -> CheckResult:
                            f"forbidden present: {present}" if present else "clean")
 
     if t == "set_contains":
-        members = _parse_set(spec)
+        members = p["members"]
         missing = [m for m in members if m.lower() not in hay]
         return CheckResult(check, not missing, "deterministic",
                            f"missing {missing}" if missing else f"all {len(members)} present")
 
     if t == "regex":
-        pattern = _parse_regex_pattern(spec)
+        pattern = p["pattern"]
         try:
             ok = re.search(pattern, answer) is not None
         except re.error as e:
@@ -162,15 +99,13 @@ def _grade_deterministic(check: Check, answer: str) -> CheckResult:
                            f"/{pattern}/ {'matched' if ok else 'no match'}")
 
     if t == "number":
-        parsed = parse_number_spec(spec)
-        if not parsed:
-            return CheckResult(check, None, "error", f"unparseable number spec: {spec!r}")
+        target, tol = p["target"], p["tol_abs"]
         nums = _numbers_in(answer)
-        hits = [n for n in nums if abs(n - parsed["value"]) <= parsed["tol_abs"] + 1e-9]
+        hits = [n for n in nums if abs(n - target) <= tol + 1e-9]
         ok = len(hits) > 0
         return CheckResult(
             check, ok, "deterministic",
-            f"{parsed['name']}={parsed['value']}±{parsed['tol_abs']:g}: "
+            f"{p['name']}={target:g}±{tol:g}: "
             f"{'matched ' + repr(hits[0]) if ok else 'no number in tolerance'}",
         )
 

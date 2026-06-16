@@ -11,7 +11,7 @@ from pathlib import Path
 HARNESS_DIR = Path(__file__).resolve().parent.parent
 # repo root (test_harness/..)
 REPO_ROOT = HARNESS_DIR.parent
-QUERIES_DIR = HARNESS_DIR / "queries_md"
+TESTS_DIR = HARNESS_DIR / "tests"
 SKILLS_DIR = REPO_ROOT / "skills"
 ENV_FILE = REPO_ROOT / ".env"
 
@@ -21,7 +21,7 @@ ENV_FILE = REPO_ROOT / ".env"
 DEFAULT_MODEL = "claude-sonnet-4-6"
 DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
 
-# service code (from `<service>_test.md`) -> skill directory name under skills/
+# service code (the `tests/<service>/` directory name) -> skill dir under skills/
 SERVICE_TO_SKILL = {
     "gdc": "genomics-data-commons",
     "pdc": "proteomic-data-commons",
@@ -96,7 +96,7 @@ class HarnessConfig:
     verbose: bool = False
     skill_max_chars: int = 0     # 0 = inject full SKILL.md; >0 truncates
 
-    queries_dir: Path = field(default=QUERIES_DIR)
+    tests_dir: Path = field(default=TESTS_DIR)
     skills_dir: Path = field(default=SKILLS_DIR)
 
     def key_for(self, env_var: str) -> str:

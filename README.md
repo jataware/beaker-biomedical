@@ -113,18 +113,18 @@ the skill's own examples, so a pass demonstrates the skill *generalizes* rather 
 worked examples. Each prompt embeds a known trap (e.g. value casing, wrong-commons routing, transient
 null responses) and a gradeable outcome.
 
-Test suites live in [`test_harness/queries_md/`](test_harness/queries_md/) — **one file per external service**, each with
-verified ground truth and, per query, machine-gradeable **Checks** (substring / number-with-tolerance /
-set-membership / regex / behavioral assertions) plus an **Automated grading** section, so the markdown
-is authoritative for a generated code test suite:
+Test suites live in [`test_harness/tests/`](test_harness/tests/) — **one directory per external service**,
+split into category folders, with one directory per test (`test.md` = prompt, `eval.md` = verified
+ground truth plus machine-gradeable **`# Automated Checks`** YAML: substring / number-with-tolerance /
+set-membership / regex / behavioral assertions), so the corpus is authoritative for the code test suite:
 
-- **[`test_harness/queries_md/cda_test.md`](test_harness/queries_md/cda_test.md)**: CDA (`cancer-data-aggregator`) — core query mechanics, file-modality → correct hand-off, full locate→analyze round-trips, and out-of-scope requests the agent should decline. Includes a scoring rubric.
-- **[`test_harness/queries_md/gdc_test.md`](test_harness/queries_md/gdc_test.md)**: GDC (`genomic-data-commons`) — project discovery (don't default to TCGA), the `case_filters` mutation-frequency denominator trap, "highly expressed" = most-variable, array-of-filters survival log-rank, and the facet-name (200-not-400) trap.
-- **[`test_harness/queries_md/pdc_test.md`](test_harness/queries_md/pdc_test.md)**: PDC (`proteomic-data-commons`) — discovery, quantitation interpretation (relative vs absolute), and file download / version-resolution / robustness.
-- **[`test_harness/queries_md/gc_test.md`](test_harness/queries_md/gc_test.md)**: GC (`general-commons`) — fallback-routing boundary, GC-only caNanoLab data + the non-`phs` key quirk, `phs_accession` resolution + String-cast, faceted search, and the DRS / no-direct-download model.
-- **[`test_harness/queries_md/icdc_test.md`](test_harness/queries_md/icdc_test.md)**: ICDC (`integrated-canine-data-commons`) — faceted cohort building, controlled-vocabulary (empty ≠ absent), mapping one dog across studies, per-study clinical detail + the empty-node trap, and files → DRS → manifest.
-- **[`test_harness/queries_md/ctdc_test.md`](test_harness/queries_md/ctdc_test.md)**: CTDC (`clinical-translational-data-commons`) — the required `variables`-key first-call quirk, `GroupCount.subjects`, a fresh disease cohort + its therapies, the carcinogen-exposure facet, the bracketed-string array quirk, and per-specimen-vs-per-participant counting.
-- **[`test_harness/queries_md/psdc_test.md`](test_harness/queries_md/psdc_test.md)**: PS-DC (`population-sciences-data-commons`) — study-level demographics, the participant-level "not-live" boundary (no fabrication), `primarySiteMorphology`, the `subjects`-means-studies facet caveat, and the dbGaP handoff.
+- **[`test_harness/tests/cda/`](test_harness/tests/cda/)**: CDA (`cancer-data-aggregator`) — core query mechanics, file-modality → correct hand-off, full locate→analyze round-trips, and out-of-scope requests the agent should decline.
+- **[`test_harness/tests/gdc/`](test_harness/tests/gdc/)**: GDC (`genomic-data-commons`) — project discovery (don't default to TCGA), the `case_filters` mutation-frequency denominator trap, "highly expressed" = most-variable, array-of-filters survival log-rank, and the facet-name (200-not-400) trap.
+- **[`test_harness/tests/pdc/`](test_harness/tests/pdc/)**: PDC (`proteomic-data-commons`) — discovery, quantitation interpretation (relative vs absolute), and file download / version-resolution / robustness.
+- **[`test_harness/tests/gc/`](test_harness/tests/gc/)**: GC (`general-commons`) — fallback-routing boundary, GC-only caNanoLab data + the non-`phs` key quirk, `phs_accession` resolution + String-cast, faceted search, and the DRS / no-direct-download model.
+- **[`test_harness/tests/icdc/`](test_harness/tests/icdc/)**: ICDC (`integrated-canine-data-commons`) — faceted cohort building, controlled-vocabulary (empty ≠ absent), mapping one dog across studies, per-study clinical detail + the empty-node trap, and files → DRS → manifest.
+- **[`test_harness/tests/ctdc/`](test_harness/tests/ctdc/)**: CTDC (`clinical-translational-data-commons`) — the required `variables`-key first-call quirk, `GroupCount.subjects`, a fresh disease cohort + its therapies, the carcinogen-exposure facet, the bracketed-string array quirk, and per-specimen-vs-per-participant counting.
+- **[`test_harness/tests/psdc/`](test_harness/tests/psdc/)**: PS-DC (`population-sciences-data-commons`) — study-level demographics, the participant-level "not-live" boundary (no fabrication), `primarySiteMorphology`, the `subjects`-means-studies facet caveat, and the dbGaP handoff.
 
 Each suite deliberately uses diseases, genes, studies, breeds, and IDs that appear **nowhere** in that
 skill's own `examples/` (e.g. kidney/colorectal rather than GDC's breast; bladder cancer rather than

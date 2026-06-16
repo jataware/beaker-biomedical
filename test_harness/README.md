@@ -1,8 +1,8 @@
 # Skill evaluation harness
 
-Runs the authoritative benchmark prompts in [`queries_md/`](queries_md/) through
-a model with the matching NCI CRDC skill loaded, then **grades the answer against
-the machine-gradeable `Checks` blocks** in those files.
+Runs the authoritative benchmark prompts in [`tests/`](tests/) through a model
+with the matching NCI CRDC skill loaded, then **grades the answer against the
+machine-gradeable `# Automated Checks` YAML** in each test's `eval.md`.
 
 It answers one question per query: *with this skill loaded, does the model reach
 the live-verified ground truth — using the right method, and avoiding the trap?*
@@ -44,8 +44,8 @@ provider across its test models *plus* the judge's; `--no-judge` drops the judge
 test_harness/
 ├── harness/                 # the package
 │   ├── config.py            # paths, model/judge defaults, per-provider key resolution (.env aware)
-│   ├── parsing.py           # *_test.md  ->  Query / Check objects
-│   ├── checks.py            # parse + grade each Check  ->  CheckResult
+│   ├── parsing.py           # tests/.../{test.md,eval.md}  ->  Query / Check objects
+│   ├── checks.py            # grade each Check (reads check.params)  ->  CheckResult
 │   ├── skills.py            # service -> skill dir; build system/user prompts
 │   ├── judge.py             # LLM judge for semantic checks (litellm, any provider)
 │   ├── runner.py            # select -> run -> grade  (one process per run)
@@ -58,13 +58,24 @@ test_harness/
 │       ├── agent.py         # the unified run_python ReAct loop -> AgentRun
 │       ├── tools.py         # run_python tool schema + text-tool-call fallback
 │       └── sandbox.py       # in-process PyEnv exec sandbox + tool-result formatter
-├── tests/                   # pytest: unit (no API) + live (opt-in)
-├── queries_md/              # the 7 authoritative *_test.md answer keys
+├── tests/                   # the benchmark corpus: tests/<service>/<category>/<test>/
+│   └── <service>/<category>/<test>/{test.md, eval.md}
+├── unit/                    # pytest: unit (no API) + live (opt-in)
 ├── run.py                   # == python -m harness.cli
 └── pyproject.toml           # package + deps + pytest + ty config
 ```
 
-Each `<service>_test.md` maps to one skill under `../skills/`:
+Each test lives in its own directory:
+
+- **`test.md`** — optional YAML frontmatter (`name`, `description`); everything after
+  the frontmatter is the prompt handed verbatim to the agent.
+- **`eval.md`** — `# Expect` and `# Failure Cases` are free prose (human/HTML only);
+  the fenced `yaml` block under `# Automated Checks` is the machine-read answer key.
+
+A test's `ref` is `<service>:<category>/<test>` (e.g. `cda:core_query_mechanics/discovery`);
+`--query` also accepts the bare `<category>/<test>` or just the leaf slug (`discovery`).
+
+Each `tests/<service>/` directory maps to one skill under `../skills/`:
 
 | service | skill dir |
 |---------|-----------|
@@ -122,10 +133,10 @@ python -m harness.cli list --service gdc --checks
 
 # dry-run: assemble prompts, show the checks + model routing, call nothing
 python -m harness.cli run --service pdc --dry-run
-python -m harness.cli run --query gdc:Q1 --dry-run --show-prompt
+python -m harness.cli run --query gdc:project_discovery --dry-run --show-prompt
 
 # run a couple of queries comparing two models, write a JSON report
-python -m harness.cli run --query gdc:Q1,gdc:Q2 \
+python -m harness.cli run --query gdc:project_discovery,gdc:survival_logrank \
     --model claude-sonnet-4-6,qwen/qwen3-coder-next -o report.json
 
 # run a whole skill suite on one model, with per-check detail
@@ -154,7 +165,7 @@ Key `run` flags:
 |------|---------|
 | `--model` | comma list of test models, each routed through litellm (see the table above). Listing >1 compares them in one report. Default `claude-sonnet-4-6`; or `$HARNESS_MODEL` |
 | `--judge-model` | model for the judge (default `claude-sonnet-4-6`), routed like `--model`, independent of it |
-| `--service` / `--query` | narrow the selection (`gdc` / `gdc:Q1,pdc:Q2`) |
+| `--service` / `--query` | narrow the selection (`gdc` / `cda:core_query_mechanics/discovery,pdc:discovery`) |
 | `--all` | run the full suite (required if no selection given) |
 | `--max-steps` | per-query ReAct budget (default 50; a cap, only costs tokens if hit) |
 | `-j/--concurrency` | parallel runs, one process each (default 8; `1` = sequential) |
@@ -183,11 +194,11 @@ pytest                                    # unit tests only (fast, no API)
 pytest --run-live -n 8                    # full live suite, default model, 8-way parallel
 pytest --run-live --service gdc           # one suite
 pytest --run-live --model claude-sonnet-4-6,qwen/qwen3-coder-next   # compare models
-pytest --run-live --query gdc:Q1,pdc:Q1   # specific queries
+pytest --run-live --query cda:discovery,pdc:discovery   # specific queries
 pytest --run-live --no-judge
 ```
 
-Live test ids look like `gdc:Q1|claude-sonnet-4-6`. A test passes when every
+Live test ids look like `cda:core_query_mechanics/discovery|claude-sonnet-4-6`. A test passes when every
 *scored* check for that query passes. Live tests skip automatically if a needed
 provider key is absent. Parallelize with `-n <workers>` (pytest-xdist — each
 worker is its own process, so the same isolation as the CLI's `-j`).
@@ -196,17 +207,25 @@ worker is its own process, so the same isolation as the CLI's `-j`).
 
 ## How grading works
 
-Each `Checks (machine-gradeable)` bullet is one objectively decidable assertion.
-Two families:
+Each entry in a test's `# Automated Checks` block is one objectively decidable
+assertion — a single-key YAML map keyed by the check type. Two families:
 
 **Deterministic** — string/number matching against the final answer, no LLM:
 
-- `substring` / `substring_any` / `substring_all` — case-insensitive substring(s)
-- `must_not_contain` — substring(s) that must be absent (encodes the trap)
-- `regex` — pattern the answer/an ID must match
-- `number` — `name ≈ value (±tol)`; passes if any number in the answer falls in
-  tolerance (`±N%` of counts, `±N` absolute, `±N pp` for percentages, `== v` exact)
-- `set_contains` — every listed member appears in the answer
+- `substring` (scalar) / `substring_any` / `substring_all` (lists) — case-insensitive substring(s)
+- `must_not_contain` (list) — substring(s) that must be absent (encodes the trap)
+- `regex` — scalar pattern (or `{name, pattern}`) the answer/an ID must match
+- `number` — `{name, target, tolerance_percent | tolerance_absolute | tolerance_pp | exact}`;
+  passes if any number in the answer falls within `target ± tolerance`
+- `set_contains` — `{name, members}`; every member appears in the answer
+
+```yaml
+checks:
+  - number: {name: deceased_subjects, target: 8556, tolerance_percent: 15}
+  - substring_any: [dead, deceased]
+  - behavior: called column_values('vital_status') before filtering
+  - set_contains: {name: top_genes, members: [TP53, CDKN2A]}
+```
 
 **Semantic** — graded by the LLM judge (`--judge-model`, default Sonnet, routed
 through litellm regardless of which model the agent ran) over the answer **and the
@@ -214,7 +233,7 @@ code/tool trace**; left *unscored* under `--no-judge`:
 
 - `behavior` — a claim about *method* (which endpoint, which filter slot, which
   interpretation, a decline/redirect) — read from the emitted code
-- `count_at_least` — the answer enumerates ≥ N distinct items
+- `count_at_least` — `{name, min}`; the answer enumerates ≥ N distinct items
 
 A query passes when all of its *scored* checks pass.
 
@@ -224,11 +243,10 @@ A query passes when all of its *scored* checks pass.
 
 - **Live code execution.** The engine `exec()`s model-generated Python in-process
   to call the public CRDC APIs. Run it where you'd run those skills.
-- **Drift.** Ground-truth numbers were live-verified on the dates in each
-  `*_test.md` header and move with data releases; `number` checks grade by
-  tolerance, not exact equality. The graded *behaviors* are stable. Re-baseline a
-  suite if counts have shifted.
-- **Cost / time.** A full `--all` run is ~46 agent sessions per model plus judge
+- **Drift.** Ground-truth numbers were live-verified (~June 2026) and move with
+  data releases; `number` checks grade by tolerance, not exact equality. The
+  graded *behaviors* are stable. Re-baseline a test if counts have shifted.
+- **Cost / time.** A full `--all` run is 45 agent sessions per model plus judge
   calls. Runs are independent, so `-j` parallelizes them (one process per run); a
   single run is ~60–90s, so the full suite is roughly that × (runs ÷ `-j`). Narrow
   with `--service`/`--query` while iterating; use `--dry-run` to preview for free.
