@@ -1,0 +1,21 @@
+# Credential declaration for the skill. Pick ONE of the two shapes below; delete the other.
+
+# --- Shape A: the skill needs a credential ---
+credentials:
+  - name: SERVICE_TOKEN          # env var / identifier
+    check: env_var               # env_var | file | gcloud_adc | none
+    required: false              # true = can't function without it; false = degraded/optional
+    description: >-
+      What it is and exactly which operations need it (vs what works without it).
+    usage: "How it's passed — e.g. HTTP header `Authorization: Bearer <token>`"
+    service: "https://service.example.com/"
+    # fallback: DEMO_KEY         # optional: default when unset (free/demo tier)
+
+# --- Shape B: open metadata API, no credential ---
+# credentials: []
+# # The X API is fully open-access for metadata/search. No key/token/cookie/login for ANY query.
+# # IMPORTANT: METADATA ONLY — it does not download data; file rows carry a DRS id. Resolve bytes in a
+# # cloud workspace (ISB-CGC / Velsera CGC / Terra); controlled data needs the user's own dbGaP auth.
+# description: >-
+#   No credentials required. <one-line restatement for programmatic consumers.>
+# service: "https://x.datacommons.cancer.gov/"

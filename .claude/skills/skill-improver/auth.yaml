@@ -1,0 +1,8 @@
+credentials: []
+# This is an authoring/tooling skill — it edits existing skill directories and reads harness output
+# to drive the fix. It holds no credentials of its own. The harness signal it consumes calls the
+# agent/judge models (provider keys resolved by the harness), and a live probe hits the open CRDC
+# APIs anonymously.
+description: >-
+  No credentials required. skill-improver edits skill files and reads harness/live-probe feedback;
+  model provider keys are the harness's concern and the CRDC APIs it probes are open.

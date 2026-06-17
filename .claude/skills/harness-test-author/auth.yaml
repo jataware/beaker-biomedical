@@ -1,0 +1,8 @@
+credentials: []
+# This is an authoring/tooling skill — it writes test files under test_harness/tests/ and uses the
+# harness CLI to validate them. It holds no credentials of its own. Running a test live hits the
+# public CRDC APIs (no key) and calls the agent/judge models, whose provider keys
+# (ANTHROPIC/OPENAI/GEMINI/OPENROUTER_API_KEY) are resolved by the harness, not by this skill.
+description: >-
+  No credentials required. harness-test-author writes test files and drives the harness CLI; the
+  CRDC APIs it validates against are open, and model provider keys are the harness's concern.

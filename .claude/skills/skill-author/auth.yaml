@@ -1,0 +1,8 @@
+credentials: []
+# This is an authoring/tooling skill — it reads and writes skill directories on the local
+# filesystem and (when probing a source) makes anonymous network requests. It holds no credentials
+# of its own. Any API key needed to *probe* a source while authoring is the source API's concern,
+# declared in the skill being authored (see references/AUTH.md), not here.
+description: >-
+  No credentials required. skill-author operates on local skill directories and makes only
+  anonymous requests when probing a source API.

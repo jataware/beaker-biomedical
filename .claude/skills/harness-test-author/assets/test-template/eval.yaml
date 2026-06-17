@@ -1,0 +1,13 @@
+# The machine-gradeable answer key — the ONLY file the harness grades.
+# Each item is a single-key map keyed by check type. Delete the ones you don't use.
+checks:
+  # --- deterministic: matched against the final-answer string, no LLM ---
+  - number: {name: <metric>, target: 0, tolerance_percent: 15}   # tolerance_percent|tolerance_absolute|tolerance_pp|exact
+  - substring_any: ["<one of these must appear>", "<synonym>"]   # also substring (scalar) / substring_all
+  - must_not_contain: ["<the trap's wrong value / fabrication>"]
+  - regex: {name: <ids>, pattern: '<regex the answer must match>'}
+  - set_contains: {name: <set>, members: ["<member>", "<member>"]}
+
+  # --- semantic: graded by --judge-model ---
+  - behavior: "<one literal, decidable claim about METHOD — which endpoint/filter slot/decline-redirect>"
+  - count_at_least: {name: <items>, min: 10}
