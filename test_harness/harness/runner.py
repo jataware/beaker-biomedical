@@ -110,9 +110,14 @@ def run_query(
     system = skills.build_system_prompt(cfg)
     user_message = skills.build_user_message(query.service, query.prompt, cfg)
 
+    # The progressive-disclosure reader, bound to this run's skill. Confined to the
+    # bound skill so a run can't read another commons' docs (see read_skill_resource).
+    def read_resource(skill, path):
+        return skills.read_skill_resource(query.service, path, cfg, skill=skill)
+
     t0 = time.monotonic()
     run, err = _run_with_timeout(
-        lambda: agent.run(user_message, system), cfg.timeout
+        lambda: agent.run(user_message, system, read_resource=read_resource), cfg.timeout
     )
     elapsed = time.monotonic() - t0
     run.model = model

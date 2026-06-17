@@ -26,10 +26,11 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from . import report
-from .config import DEFAULT_JUDGE_MODEL, DEFAULT_MODEL, HarnessConfig
+from .config import DEFAULT_JUDGE_MODEL, DEFAULT_MODEL, SKILLS_DIR, HarnessConfig
 from .llm.routing import PROVIDER_KEY_ENV, resolve_model
 from .runner import run_suite, select_queries
 
@@ -149,12 +150,14 @@ def cmd_run(args) -> int:
     def on_done(res, i, total):
         print(f"[{i}/{total}] " + report.render_run_line(res), flush=True)
 
+    t0 = time.monotonic()
     suite = run_suite(
         config, models, services=services, qids=qids, judge=judge,
         concurrency=concurrency,
         on_start=on_start if concurrency == 1 else None,
         on_done=on_done,
     )
+    elapsed_total = time.monotonic() - t0
 
     if args.detail:
         print()
@@ -164,9 +167,20 @@ def cmd_run(args) -> int:
     print(report.render_failures(suite))
     print(report.render_summary(suite))
 
+    suite_dict = None
+    if args.output or args.html:
+        suite_dict = report.suite_to_dict(suite, rep=args.rep, elapsed_total_s=elapsed_total)
     if args.output:
-        Path(args.output).write_text(json.dumps(report.suite_to_dict(suite), indent=2))
+        Path(args.output).write_text(json.dumps(suite_dict, indent=2))
         print(f"\nWrote JSON report to {args.output}")
+    if args.html:
+        from .site import build_site
+        rep_path = args.output
+        if not rep_path:  # no JSON requested: stash one next to the dashboard
+            rep_path = str(Path(args.html).with_suffix(".report.json"))
+            Path(rep_path).write_text(json.dumps(suite_dict, indent=2))
+        out = build_site([rep_path], args.html, tests_dir=Path(args.tests_dir))
+        print(f"Wrote dashboard to {out}")
 
     # Exit non-zero if any run failed (CI-friendly).
     return 0 if all(r.passed for r in suite.results) else 1
@@ -200,6 +214,19 @@ def _dry_run(config, queries, models, args) -> int:
 def cmd_compare(args) -> int:
     from . import compare
     print(compare.render(args.reports))
+    return 0
+
+
+def cmd_site(args) -> int:
+    """Build the self-contained static dashboard from one or more report JSONs."""
+    from .site import build_site
+    out = build_site(
+        args.reports, args.output,
+        skills_dir=Path(args.skills_dir) if args.skills_dir else SKILLS_DIR,
+        tests_dir=Path(args.tests_dir),
+    )
+    kb = out.stat().st_size // 1024
+    print(f"Wrote dashboard to {out}  ({kb} KB, {len(args.reports)} report file(s))")
     return 0
 
 
@@ -251,11 +278,25 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--detail", action="store_true", help="print per-check detail")
     pr.add_argument("--verbose", action="store_true", help="verbose agent output")
     pr.add_argument("-o", "--output", help="write a JSON report to this path")
+    pr.add_argument("--html", help="also build the static dashboard to this path "
+                    "(self-contained index.html)")
+    pr.add_argument("--rep", type=int, default=1,
+                    help="repetition index stamped on this report (label only); "
+                         "run with different --rep values to N report files the "
+                         "dashboard aggregates into per-(test,model) pass-rates")
     pr.set_defaults(func=cmd_run)
 
     pc = sub.add_parser("compare", help="side-by-side comparison of report JSONs (no API)")
     pc.add_argument("reports", nargs="+", help="report JSON paths written by `run -o`")
     pc.set_defaults(func=cmd_compare)
+
+    ps = sub.add_parser("site", help="build the static dashboard from report JSON(s) (no API)")
+    ps.add_argument("reports", nargs="+", help="report JSON paths (globs expand in the shell); "
+                    "multiple files/reps are aggregated into per-(test,model) pass-rates")
+    ps.add_argument("-o", "--output", default="dashboard/index.html",
+                    help="output path for the self-contained dashboard (default: dashboard/index.html)")
+    ps.add_argument("--skills-dir", default=None, help="skills/ root to snapshot (default: repo skills/)")
+    ps.set_defaults(func=cmd_site)
     return p
 
 

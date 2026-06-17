@@ -9,14 +9,20 @@ so that importing this package stays litellm-free (litellm imports slowly);
 import it from ``harness.llm.completion`` directly when you need it.
 """
 
-from .agent import AgentRun, LiteLLMAgent
+from .agent import AgentRun, LiteLLMAgent, ResourceReader, Step
 from .routing import PROVIDER_KEY_ENV, Provider, ResolvedModel, resolve_model
-from .sandbox import CodeStep, PyEnv, format_tool_result
-from .tools import RUN_PYTHON_TOOL, parse_text_tool_calls
+from .sandbox import (
+    CodeStep,
+    PyEnv,
+    ResourceStep,
+    format_resource_result,
+    format_tool_result,
+)
+from .tools import READ_SKILL_FILE_TOOL, RUN_PYTHON_TOOL, TOOLS, parse_text_tool_calls
 
 __all__ = [
-    "AgentRun", "LiteLLMAgent",
+    "AgentRun", "LiteLLMAgent", "ResourceReader", "Step",
     "Provider", "ResolvedModel", "resolve_model", "PROVIDER_KEY_ENV",
-    "CodeStep", "PyEnv", "format_tool_result",
-    "RUN_PYTHON_TOOL", "parse_text_tool_calls",
+    "CodeStep", "PyEnv", "ResourceStep", "format_tool_result", "format_resource_result",
+    "RUN_PYTHON_TOOL", "READ_SKILL_FILE_TOOL", "TOOLS", "parse_text_tool_calls",
 ]

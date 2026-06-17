@@ -4,10 +4,19 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .checks import CheckResult
+from . import meta as _meta
+from .checks import CheckResult, DETERMINISTIC_TYPES
+from .llm import CodeStep, ResourceStep
 from .runner import RunResult, Suite
 
 _TICK = {True: "PASS", False: "FAIL", None: "—"}
+
+
+def _clip(text: str | None, cap: int = _meta.STDOUT_CAP) -> tuple[str, bool, int]:
+    """(clipped_text, truncated, original_len) for a captured stream."""
+    text = text or ""
+    n = len(text)
+    return (text, False, n) if n <= cap else (text[:cap], True, n)
 
 
 def _short(model: str) -> str:
@@ -23,14 +32,49 @@ def _check_dict(r: CheckResult) -> dict:
         "passed": r.passed,
         "method": r.method,
         "detail": r.detail,
+        "family": "deterministic" if r.check.type in DETERMINISTIC_TYPES else "semantic",
     }
 
 
-def result_to_dict(res: RunResult) -> dict:
+def _step_dict(i: int, s: CodeStep | ResourceStep) -> dict:
+    if isinstance(s, ResourceStep):
+        content, c_trunc, c_len = _clip(s.content)
+        d = {"step": i, "kind": "skill_file", "skill": s.skill, "path": s.path,
+             "ok": s.ok, "content": content, "error": s.error}
+        if c_trunc:
+            d["content_truncated"], d["content_len"] = True, c_len
+        return d
+    out, out_trunc, out_len = _clip(s.stdout)
+    err, err_trunc, err_len = _clip(s.stderr)
+    d = {"step": i, "kind": "python", "code": s.code,
+         "stdout": out, "stderr": err, "error": s.error}
+    if out_trunc:
+        d["stdout_truncated"], d["stdout_len"] = True, out_len
+    if err_trunc:
+        d["stderr_truncated"], d["stderr_len"] = True, err_len
+    return d
+
+
+def _docs_opened(res: RunResult, skill_files: list[str]) -> list[str]:
+    """Skill docs this run actually read, order-preserving and de-duplicated:
+    files loaded via the ``read_skill_file`` tool (precise), unioned with any the
+    agent opened from Python (matched heuristically against executed code)."""
+    via_tool = [s.path for s in res.run.trace if isinstance(s, ResourceStep) and s.ok]
+    via_code = _meta.detect_docs_opened(
+        (s.code for s in res.run.trace if isinstance(s, CodeStep)), skill_files)
+    return list(dict.fromkeys(via_tool + via_code))
+
+
+def result_to_dict(res: RunResult, *, rep: int = 1,
+                   skill_files: list[str] | None = None) -> dict:
+    qid = res.query.qid
     return {
         "service": res.query.service,
-        "qid": res.query.qid,
+        "category": qid.split("/", 1)[0] if "/" in qid else "",
+        "qid": qid,
         "ref": res.query.ref,
+        "run_uid": _meta.run_uid(res.query.ref, res.model, rep),
+        "rep": rep,
         "title": res.query.title,
         "prompt": res.query.prompt,
         "model": res.model,
@@ -42,28 +86,40 @@ def result_to_dict(res: RunResult) -> dict:
         "elapsed_s": round(res.elapsed, 1),
         "error": res.error,
         "steps": res.run.steps,
+        # On-demand skill docs that actually reached the agent this run — read via
+        # the read_skill_file tool, or opened from Python (see _docs_opened).
+        "docs_opened": _docs_opened(res, skill_files or []),
         "final_answer": res.run.final_answer,
         "checks": [_check_dict(r) for r in res.grade.results],
-        # Full agent trace, for post-hoc inspection without re-running: each step's
-        # code plus its captured output. `transcript` is the same flat rendering
-        # the judge sees (answer + code + clipped stdout), easy to eyeball.
-        "code_trace": [
-            {"code": s.code, "stdout": s.stdout, "stderr": s.stderr, "error": s.error}
-            for s in res.run.code_trace
-        ],
-        "transcript": res.run.transcript(),
+        # Full agent trace, for post-hoc inspection without re-running: code steps
+        # (code + captured output) and skill-file loads (path + content), interleaved
+        # in execution order, each tagged with ``kind``. Clipped, truncation flagged.
+        # The flat judge-view transcript is reconstructed by the dashboard from this.
+        "trace": [_step_dict(i, s) for i, s in enumerate(res.run.trace, 1)],
     }
 
 
-def suite_to_dict(suite: Suite) -> dict:
+def suite_to_dict(suite: Suite, *, rep: int = 1,
+                  elapsed_total_s: float | None = None) -> dict:
+    models = sorted({r.model for r in suite.results})
+    services = {r.query.service for r in suite.results}
+    skills_cap = _meta.capture_skills(services, suite.config)
     # Keep top-level ``model`` (the configured default) so the per-file `compare`
     # subcommand still reads it; ``models`` lists every model actually run.
     return {
+        "schema_version": _meta.SCHEMA_VERSION,
+        "meta": _meta.build_meta(suite.config, models, rep=rep,
+                                 elapsed_total_s=elapsed_total_s),
         "model": suite.config.model,
-        "models": sorted({r.model for r in suite.results}),
+        "models": models,
         "judge_model": suite.config.judge_model,
         "judge": suite.config.use_judge,
-        "results": [result_to_dict(r) for r in suite.results],
+        "skills": skills_cap,
+        "results": [
+            result_to_dict(r, rep=rep,
+                           skill_files=skills_cap.get(r.query.service, {}).get("files", []))
+            for r in suite.results
+        ],
         "summary": summary_stats(suite),
     }
 

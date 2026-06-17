@@ -17,12 +17,39 @@ from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 
 
+# Max chars of a loaded skill file kept in context (and in the trace). Reference
+# docs are occasionally large; full text rarely adds signal past this and it
+# keeps the conversation light. Truncation is flagged, never silent.
+RESOURCE_CHAR_CAP = 20_000
+
+
 @dataclass
 class CodeStep:
     code: str
     stdout: str = ""
     stderr: str = ""
     error: str | None = None
+    kind: str = "python"   # trace discriminator; see ResourceStep
+
+
+@dataclass
+class ResourceStep:
+    """One ``read_skill_file`` load — a progressive-disclosure event in the trace.
+
+    Sits in the same ordered :attr:`AgentRun.trace` as :class:`CodeStep`, so the
+    transcript and dashboard show skill reads interleaved with code in execution
+    order. ``path`` is the skill-relative posix path (matches the skill file
+    listing keys); ``skill`` is the resolved skill name.
+    """
+
+    skill: str
+    path: str
+    ok: bool
+    content: str = ""
+    error: str | None = None
+    truncated: bool = False
+    n_chars: int = 0       # original length before any cap
+    kind: str = "skill_file"
 
 
 class PyEnv:
@@ -54,3 +81,11 @@ def format_tool_result(step: CodeStep, limit: int = 20000) -> str:
     if step.error:
         payload += f"\n[exception]\n{step.error}"
     return (payload.strip() or "(no output)")[:limit]
+
+
+def format_resource_result(step: "ResourceStep") -> str:
+    """Render a ResourceStep into the text payload fed back to the model: the file
+    text on success, or a short error (which already lists the available files)."""
+    if step.ok:
+        return step.content or "(empty file)"
+    return f"[read_skill_file] {step.error}"

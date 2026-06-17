@@ -9,10 +9,13 @@ the live-verified ground truth — using the right method, and avoiding the trap
 
 ## One engine, any model
 
-There is a **single execution engine**: a `run_python` ReAct loop driven through
+There is a **single execution engine**: a ReAct loop driven through
 **[litellm](https://github.com/BerriAI/litellm)**, which normalises OpenAI-style
-tool-calling across every provider. The only variable is the **model** — list one
-or several with `--model` and they all get the *identical* skill text + task.
+tool-calling across every provider. The agent gets two tools — `run_python`
+(execute code in a persistent namespace) and `read_skill_file` (load one of the
+skill's reference/example/asset files into context by its relative path, the
+progressive-disclosure mechanism). The only variable is the **model** — list one
+or several with `--model` and they all get the *identical* skill text + tools + task.
 
 Which provider a model id reaches is decided by one rule
 ([`harness/llm/routing.py`](harness/llm/routing.py)):
@@ -28,7 +31,7 @@ Which provider a model id reaches is decided by one rule
 So `claude-sonnet-4-6` is *always* called natively on `ANTHROPIC_API_KEY`, and a
 slug like `qwen/qwen3-coder-next` falls back to OpenRouter — by construction, not
 by convention. A text-tool-call fallback keeps models that emit their native tool
-format as plain text usable (e.g. `google/gemma-4-31b-it`).
+format as plain text usable — for *both* tools (e.g. `google/gemma-4-31b-it`).
 
 **The judge is just another routed model.** The semantic `behavior` /
 `count_at_least` checks are graded by `--judge-model` (default `claude-sonnet-4-6`
@@ -46,18 +49,22 @@ test_harness/
 │   ├── config.py            # paths, model/judge defaults, per-provider key resolution (.env aware)
 │   ├── parsing.py           # tests/.../{test.md,eval.yaml}  ->  Query / Check objects
 │   ├── checks.py            # grade each Check (reads check.params)  ->  CheckResult
-│   ├── skills.py            # service -> skill dir; build system/user prompts
+│   ├── skills.py            # service -> skill dir; build prompts; read_skill_file resource loader
 │   ├── judge.py             # LLM judge for semantic checks (litellm, any provider)
 │   ├── runner.py            # select -> run -> grade  (one process per run)
-│   ├── report.py            # console + JSON rendering (JSON includes the full trace)
+│   ├── report.py            # console + JSON rendering (schema_version "1", full trace)
+│   ├── meta.py              # run-level meta + skill capture + docs_opened detection
 │   ├── compare.py           # side-by-side comparison of N report JSONs
 │   ├── cli.py               # the CLI test runner  (python -m harness.cli)
+│   ├── site/                # static dashboard builder (report JSON -> index.html)
+│   │   ├── build.py         # pure JSON -> HTML: aggregate, snapshot, render, inline
+│   │   └── template/        # index.html + style.css + app.js (vanilla, no deps)
 │   └── llm/                 # the model-access layer (one litellm engine)
 │       ├── routing.py       # model id -> provider (the heart of the design)
 │       ├── completion.py    # the single typed litellm boundary
-│       ├── agent.py         # the unified run_python ReAct loop -> AgentRun
-│       ├── tools.py         # run_python tool schema + text-tool-call fallback
-│       └── sandbox.py       # in-process PyEnv exec sandbox + tool-result formatter
+│       ├── agent.py         # the two-tool (run_python + read_skill_file) ReAct loop -> AgentRun
+│       ├── tools.py         # run_python + read_skill_file tool schemas + text-tool-call fallback
+│       └── sandbox.py       # in-process PyEnv exec sandbox + CodeStep/ResourceStep trace + formatters
 ├── tests/                   # the benchmark corpus: tests/<service>/<category>/<test>/
 │   └── <service>/<category>/<test>/{test.md, rationale.md, eval.yaml}
 ├── unit/                    # pytest: unit (no API) + live (opt-in)
@@ -177,13 +184,58 @@ Key `run` flags:
 | `--anthropic-api-key` / `--openai-api-key` / `--gemini-api-key` / `--openrouter-api-key` | override the matching env var |
 | `--dry-run` / `--show-prompt` | preview (incl. model routing) without calling the API |
 | `--detail` | print every check result, not just failures |
-| `-o/--output` | write a full JSON report (final answer, graded checks, full per-step `code_trace`, and a flat `transcript`) |
+| `-o/--output` | write a full JSON report (run-level `meta`, the verbatim injected `skills`, and per-run final answer, graded checks, the interleaved `trace` of code steps + `read_skill_file` loads, and detected `docs_opened`) |
+| `--html` | also build the static dashboard (one self-contained `index.html`) from this run |
+| `--rep` | repetition index stamped on the report; run with `--rep 1..N` to N files the dashboard aggregates into per-(test,model) pass-rates |
 
 `run` exits non-zero if any selected run fails (CI-friendly).
 
 A second subcommand, `compare <report.json> …`, prints a query × model grid plus
 per-check detail across any number of saved reports — no API calls. (It reads a
 report's top-level `model`, so write one report file per model for comparison.)
+
+---
+
+## Dashboard
+
+`site` turns one or more report JSONs into a single **self-contained
+`index.html`** — data, CSS and JS all inlined, so it opens straight from disk
+(no server) and uploads as one CI artifact. It is a pure `JSON → HTML` build, so
+it reruns cheaply after every harness run.
+
+```bash
+# build from a glob of reports (multiple files/reps aggregate into pass-rates)
+python -m harness.cli site reports/*.json -o dashboard/index.html
+
+# or build it inline with a run
+python -m harness.cli run --all --model claude-sonnet-4-6 -o run.json --html dashboard/index.html
+```
+
+Three hash-routed views, all from the same embedded blob:
+
+- **Results** — a pass-rate heatmap (rows = tests grouped by service/category,
+  columns = models, *amber* = partial across reps), filters (search, fail-only,
+  service/model), and a per-run detail panel: the prompt, the graded checks
+  (deterministic vs judge), and the **trace** as step cards (the code the agent
+  ran + its stdout/stderr, error steps auto-expanded).
+- **Skills** — a *read-only* browser of the whole skill repo at the captured SHA,
+  rendered markdown, with a **reference-reach** badge per doc (`opened in k/N
+  runs`, greyed at `0/N`) computed from each run's `docs_opened`. A run's trace
+  links here via *"View full skill →"*.
+- **Tests** — the corpus / answer-key explorer: rendered `test.md` prompt and
+  `rationale.md`, the pretty-printed `eval.yaml` checks, and links to the runs.
+
+The report schema is the contract (`schema_version: "1"`): a `meta` block
+(timestamp, git branch+SHA, config, CI context), a top-level `skills` capture
+(the verbatim injected `SKILL.md` + offered file listing per service), and
+per-run `category` / `rep` / `run_uid` / `docs_opened`. The builder tolerates the
+legacy single-model `backend` schema, and snapshots the `skills/` + `tests/`
+trees from the working copy at build time.
+
+**CI:** [`.github/workflows/eval-dashboard.yml`](../.github/workflows/eval-dashboard.yml)
+runs the suite (provider keys from repo Secrets) and publishes the dashboard as
+an artifact (and optionally to Pages). It is manual + weekly, not per-push, since
+each run spends API tokens; widen models/reps/services via the dispatch inputs.
 
 ---
 

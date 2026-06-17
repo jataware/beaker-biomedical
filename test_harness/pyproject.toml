@@ -23,6 +23,9 @@ dependencies = [
   # skill, not a missing dependency).
   "requests>=2.31",
   "cdapython>=2.1.0",
+  # Build-time markdown -> HTML for the static dashboard's Skills/Tests views
+  # (pre-rendered so the page ships no client-side markdown engine).
+  "markdown-it-py>=3.0",
 ]
 
 [project.optional-dependencies]
