@@ -141,7 +141,7 @@
       onInput: function (e) { ui.q = e.target.value; render(); } });
     var expand = h("label", { class: "chip" },
       h("input", { type: "checkbox", checked: ui.expand, onChange: function (e) { ui.expand = e.target.checked; render(); } }),
-      " expand traces");
+      "expand traces");
     return h("div", { class: "controls" }, search, seg, svcSel, modelSel, expand);
   }
 
@@ -158,7 +158,15 @@
     });
 
     var head = h("tr", {}, h("th", { class: "test" }, "test"),
-      models.map(function (m) { return h("th", {}, m.split("/").pop()); }));
+      models.map(function (m) {
+        var pass = 0, total = 0;
+        rows.forEach(function (t) { var c = cellOf(t.ref, m); if (c) { pass += c.pass; total += c.total; } });
+        var allPass = total > 0 && pass === total;
+        return h("th", {},
+          h("div", { class: "mname" }, m.split("/").pop()),
+          h("div", { class: "mtally" + (allPass ? " allpass" : "") },
+            total ? (allPass ? "✓ " : "") + pass + "/" + total : "—"));
+      }));
     var body = [], curGroup = null, selKey = null;
     if (sel.uid && runByUid[sel.uid]) { var sr = runByUid[sel.uid]; selKey = sr.ref + "|" + sr.model; }
     rows.forEach(function (t) {
@@ -191,20 +199,21 @@
   // -- run detail (checks + trace) ---------------------------------------
   function checkRow(c) {
     var st = c.passed === true ? "pass" : c.passed === false ? "fail" : "none";
-    var mark = c.passed === true ? "PASS" : c.passed === false ? "FAIL" : "—";
+    var mark = c.passed === true ? "PASS" : c.passed === false ? "FAIL" : "UNSCORED";
     return h("tr", {},
-      h("td", {}, h("span", { class: "badge " + st }, mark)),
-      h("td", {}, h("span", { class: "checktype" }, c.type),
-        c.family ? h("span", { class: "chip-fam " + c.family }, c.family)
-                 : h("span", { class: "tag" }, c.method || "")),
+      h("td", { class: "st" }, h("span", { class: "badge lg " + st }, mark)),
+      h("td", { class: "fam" }, c.family
+        ? h("span", { class: "chip-fam " + c.family }, c.family)
+        : (c.method ? h("span", { class: "tag" }, c.method) : null)),
+      h("td", { class: "ct" }, h("span", { class: "checktype" }, c.type)),
       h("td", { class: "desired" }, c.spec || ""),
       h("td", { class: "output" }, c.detail || ""));
   }
 
   function checksTable(checks) {
-    return h("table", { class: "checks" },
-      h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "check"),
-        h("th", {}, "desired"), h("th", {}, "output"))),
+    return h("table", { class: "checks rundetail" },
+      h("thead", {}, h("tr", {}, h("th", {}, "result"), h("th", {}, "kind"),
+        h("th", {}, "check"), h("th", {}, "desired"), h("th", {}, "output"))),
       h("tbody", {}, (checks || []).map(checkRow)));
   }
 
@@ -258,7 +267,7 @@
     var reps = h("div", { class: "reptabs" }, group.map(function (r) {
       return h("button", { class: r.run_uid === run.run_uid ? "active" : "",
         onClick: function () { location.hash = hResults(r.run_uid); } },
-        h("span", { class: "badge " + (r.passed ? "pass" : "fail") }, r.passed ? "✓" : "✗"), " rep " + r.rep);
+        h("span", { class: "badge " + (r.passed ? "pass" : "fail") }, r.passed ? "✓" : "✗"), "rep " + r.rep);
     }));
 
     var docChips = (run.docs_opened || []).map(function (p) {
@@ -380,7 +389,15 @@
           h("span", { class: "count" }, String(b.n))),
         catEls);
     });
-    var list = h("div", { class: "tree testlist" }, listKids);
+    function setAllOpen(open) {
+      document.querySelectorAll(".testlist details.treegrp").forEach(function (d) {
+        if (open) d.setAttribute("open", ""); else d.removeAttribute("open");
+      });
+    }
+    var treetools = h("div", { class: "treetools" },
+      h("button", { onClick: function () { setAllOpen(true); } }, "expand all"),
+      h("button", { onClick: function () { setAllOpen(false); } }, "collapse all"));
+    var list = h("div", { class: "tree testlist" }, treetools, listKids);
 
     var checks = h("table", { class: "checks answerkey" }, h("tbody", {}, t.checks.map(function (c) {
       return h("tr", {},
