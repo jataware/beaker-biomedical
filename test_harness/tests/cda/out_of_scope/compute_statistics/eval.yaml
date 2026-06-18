@@ -1,4 +1,3 @@
 checks:
-  - behavior: "declined to compute survival in CDA; routed the curve + p-value to GDC /analysis/survival (genomic-data-commons)"
-  - substring_any: ["/analysis/survival", "genomic-data-commons", "GDC"]
-  - must_not_contain: ["p-value from CDA", "CDA survival", "KM curve from CDA", "log-rank ... CDA"]
+  - behavior: "declined to compute the Kaplan-Meier survival curve / log-rank test in CDA (it is metadata-only and performs no statistics)"
+  - behavior: "routed the survival curve and log-rank p-value comparing male vs female TCGA-LUAD patients to the genomic-data-commons survival analysis (GDC /analysis/survival)"

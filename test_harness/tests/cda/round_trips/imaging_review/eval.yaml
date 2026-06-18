@@ -1,5 +1,3 @@
 checks:
-  - behavior: "located DICOM files in CDA (returning drs_uri), then routed series/viewing to the imaging-data-commons"
-  - substring_any: ["imaging-data-commons", "IDC", "viewer"]
-  - substring_any: ["drs_uri", "DRS"]
-  - must_not_contain: ["CDA renders", "CDA displays", "download the images from CDA", "view the pixels in CDA"]
+  - behavior: "located the glioblastoma cohort's DICOM files in CDA via a file query on format = DICOM (e.g. summarize_files or get_file_data), the files that carry drs_uri"
+  - behavior: "routed series and viewing to the imaging-data-commons rather than expecting CDA to render or serve the image pixels"

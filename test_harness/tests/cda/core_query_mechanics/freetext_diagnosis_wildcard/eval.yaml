@@ -4,4 +4,3 @@ checks:
       target: 1432
       tolerance_percent: 20
   - behavior: "used a wildcard ('*melanoma*') or discovered the free-text variants via column_values('diagnosis'), did not filter the exact 'melanoma'"
-  - must_not_contain: ["0 subjects", "no melanoma", "not diagnosed with melanoma"]

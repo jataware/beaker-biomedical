@@ -1,4 +1,3 @@
 checks:
-  - behavior: "stated CDA does not serve expression matrices; located the cohort then routed to GDC /gene_expression/values"
-  - substring_any: ["gene_expression/values", "genomic-data-commons", "GDC"]
-  - must_not_contain: ["cdapython", "CDA returns the matrix", "genes×samples from CDA", "genes x samples from CDA"]
+  - behavior: "stated CDA does not serve gene-expression matrices (it is metadata-only)"
+  - behavior: "located the TCGA-BRCA cohort in CDA, then routed the FPKM-UQ matrix request to the genomic-data-commons (GDC /gene_expression/values)"

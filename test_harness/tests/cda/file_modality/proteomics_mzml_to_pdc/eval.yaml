@@ -3,6 +3,6 @@ checks:
       name: "mzml_files"
       target: 46792
       tolerance_percent: 15
-  - substring_any: ["proteomic-data-commons", "PDC"]
-  - behavior: "counted files via summarize_files(format = mzML) and routed quantitation to PDC; noted CDA returns drs_uri only (no abundances)"
-  - must_not_contain: ["quantitation in GDC", "run the analysis in GDC", "CDA computes", "CDA returns abundances"]
+  - behavior: "counted the files with a file query on format = mzML (e.g. summarize_files(match_all=['format = mzML']))"
+  - behavior: "routed the quantitation analysis to the proteomic-data-commons"
+  - behavior: "noted CDA returns drs_uri only and holds no abundance values"

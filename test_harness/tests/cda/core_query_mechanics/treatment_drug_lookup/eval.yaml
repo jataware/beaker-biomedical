@@ -3,6 +3,5 @@ checks:
       name: "cisplatin_subjects"
       target: 1168
       tolerance_percent: 15
-  - substring: "Cisplatin"
   - behavior: "used the therapeutic_agent column (discovered via column_values), not an invented drug/treatment column"
-  - must_not_contain: ["1270", "1,270"]
+  - behavior: "reported the count of distinct treated subjects (~1168), not the larger value-occurrence / treatment-row count (~1270) — the number tolerance alone cannot separate these"

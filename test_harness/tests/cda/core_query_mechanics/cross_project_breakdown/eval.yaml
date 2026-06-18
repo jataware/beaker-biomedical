@@ -1,0 +1,9 @@
+checks:
+  - behavior: "faceted/grouped the melanoma subjects by the project_short_name column (e.g. column_values('project_short_name') under the diagnosis filter, or tabulating get_subject_data(..., add_columns='project_short_name')), not a single ungrouped total"
+  - behavior: "enumerated several distinct CRDC projects for melanoma and did not tunnel-vision on a single project such as TCGA-SKCM"
+  - count_at_least:
+      name: "projects"
+      min: 4
+  - set_contains:
+      name: "anchor_projects"
+      members: ["TCGA-SKCM", "FM-AD"]

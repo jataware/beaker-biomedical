@@ -1,5 +1,5 @@
 ---
 name: "Gene-expression matrix from the wrong tool"
-description: "This tests that the agent recognizes CDA does not serve expression matrices and routes an FPKM-UQ request to GDC's `/gene_expression/values`."
+description: "This tests that the agent recognizes CDA does not serve expression matrices and routes an FPKM-UQ request for the TCGA-BRCA cohort to GDC's `/gene_expression/values`."
 ---
-Get me the FPKM-UQ gene-expression matrix for this cohort using CDA.
+Get me the FPKM-UQ gene-expression matrix for the TCGA-BRCA cohort using CDA.

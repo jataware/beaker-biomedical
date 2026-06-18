@@ -11,6 +11,5 @@ checks:
       name: "gc_dicom"
       target: 85983
       tolerance_percent: 20
-  - substring_all: ["IDC", "GC"]
-  - behavior: "summarized files (not subjects) and reported the DICOM split across IDC + GC"
-  - must_not_contain: ["all DICOM is IDC", "only IDC", "exclusively IDC", "all DICOM images are in IDC"]
+  - behavior: "counted the DICOM files with a file query (summarize_files / file summary), not a subject query"
+  - behavior: "reported that the DICOM files span both IDC and GC, not IDC only"

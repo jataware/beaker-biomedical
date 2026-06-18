@@ -1,5 +1,3 @@
 checks:
-  - behavior: "confirmed the PDC-resident cohort in CDA (format = mzML / subject_data_at_pdc), then handed off to proteomic-data-commons for the quantitation"
-  - substring_any: ["proteomic-data-commons", "PDC"]
-  - substring_any: ["metadata-only", "no abundance", "CDA cannot produce", "CDA has no abundance"]
-  - must_not_contain: ["protein abundance from GDC", "GDC for protein abundance", "CDA returns quant"]
+  - behavior: "confirmed the cohort has PDC proteomics in CDA (queried CDA with format = mzML and/or data_source = PDC to establish the cohort's proteomics files live at PDC)"
+  - behavior: "handed tumor-vs-normal protein quantitation off to the proteomic-data-commons because CDA holds no abundance values"

@@ -3,5 +3,6 @@ checks:
       name: "subjects"
       target: 328
       tolerance_percent: 15
-  - behavior: "used 'year_of_birth < 1950' with spaces around the operator and 'cause_of_death != NULL' (CDA NULL keyword), filtered species = human"
-  - must_not_contain: ["IS NOT NULL", "year_of_birth<1950"]
+  - behavior: "used the range filter 'year_of_birth < 1950' with spaces around the operator"
+  - behavior: "filtered species = human"
+  - behavior: "filtered for a recorded cause of death using the CDA NULL keyword (e.g. 'cause_of_death != NULL'), not an enumerated value list or a guessed value"

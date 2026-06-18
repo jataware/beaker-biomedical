@@ -3,7 +3,5 @@ checks:
       name: "idc_and_gdc_subjects"
       target: 15699
       tolerance_percent: 15
-  - behavior: "used subject_data_at_idc = true AND subject_data_at_gdc = true (the *_data_at_* booleans)"
-  - substring_any: ["imaging", "IDC"]
-  - substring_any: ["genomic", "sequenc", "GDC"]
-  - must_not_contain: ["upstream_source"]
+  - behavior: "intersected the two repositories to count subjects present at BOTH — data_source=['IDC','GDC'] in cdapython, or the subject_data_at_idc/subject_data_at_gdc booleans in raw REST"
+  - behavior: "derived the linkage from the repository-membership fields (data_source / data_at_* booleans), not the known-buggy upstream_source linkage field"

@@ -1,4 +1,4 @@
 checks:
-  - behavior: "declined to download/process bytes in CDA; routed bytes to a cloud workspace and variant calling to a pipeline/GDC product"
-  - substring_any: ["drs_uri", "ISB-CGC", "CGC", "Terra", "cloud workspace", "dbGaP"]
-  - must_not_contain: [".download(", "CDA runs the pipeline", "CDA calls variants", "slice the BAM in CDA"]
+  - behavior: "declined to download or process the BAM bytes inside CDA"
+  - behavior: "handed the located BAM file set off to a cloud workspace via its drs_uri / a DRS manifest"
+  - behavior: "routed somatic variant calling to a pipeline or genomic-data-commons product (not run inside CDA)"

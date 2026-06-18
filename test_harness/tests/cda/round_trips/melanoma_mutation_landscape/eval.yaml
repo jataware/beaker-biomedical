@@ -1,12 +1,10 @@
 checks:
   - number:
       name: "melanoma_gdc_subjects"
-      target: 1229
+      target: 1239
       tolerance_percent: 15
   - behavior: "located the cohort in CDA, stripped the PROGRAM. prefix to get GDC cases.submitter_id, then computed frequencies in GDC (genomic-data-commons), NOT CDA's mutation table"
-  - substring: "TCGA-SKCM"
   - set_contains:
       name: "top_genes"
       members: ["TP53", "CDKN2A"]
   - behavior: "did not default to only TCGA-SKCM (noted Skin spans FM-AD / HCMI-CMDC / … other projects)"
-  - must_not_contain: ["mutation frequencies from CDA", "CDA's mutation table for the ranking"]

@@ -1,4 +1,4 @@
 checks:
-  - behavior: "stated CDA holds no abundance/expression values; routed protein abundance to proteomic-data-commons"
-  - substring_any: ["no abundance", "no expression", "metadata", "proteomic-data-commons"]
-  - must_not_contain: ["abundance column", "expression column", "EGFR abundance is"]
+  - behavior: "stated that CDA holds no protein-abundance/expression values (CDA is metadata-only and can only locate the cohort)"
+  - behavior: "routed the EGFR protein-abundance request to the proteomic-data-commons"
+  - behavior: "did not fabricate or report any numeric EGFR protein-abundance value (correctly declined, since CDA has none)"
