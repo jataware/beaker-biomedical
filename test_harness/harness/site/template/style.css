@@ -28,7 +28,7 @@ code, pre { font-family: var(--mono); }
 header.top { padding: 22px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
 header.top h1 { font-size: 18px; margin: 0 0 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.chip { background: var(--chip-bg); color: var(--muted); border-radius: 999px;
+.chip { background: var(--chip-bg); color: var(--muted);
         padding: 2px 10px; font-size: 12px; white-space: nowrap; }
 .chip b { color: var(--ink); font-weight: 600; }
 .headline { display: flex; gap: 22px; margin: 12px 0 4px; flex-wrap: wrap; }
@@ -38,22 +38,22 @@ header.top h1 { font-size: 18px; margin: 0 0 8px; }
 /* view tabs */
 nav.tabs { display: flex; gap: 4px; margin: 14px 0 18px; }
 nav.tabs button { font: inherit; border: 1px solid var(--line); background: var(--panel);
-  color: var(--muted); padding: 6px 16px; border-radius: 8px; cursor: pointer; }
+  color: var(--muted); padding: 6px 16px; cursor: pointer; }
 nav.tabs button.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
 /* controls */
 .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
 .controls input, .controls select { font: inherit; padding: 6px 10px; border: 1px solid var(--line);
-  border-radius: 8px; background: var(--panel); color: var(--ink); }
+ background: var(--panel); color: var(--ink); }
 .controls input[type=search] { flex: 1; min-width: 180px; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--line); overflow: hidden; }
 .seg button { font: inherit; border: 0; background: var(--panel); color: var(--muted);
   padding: 6px 12px; cursor: pointer; }
 .seg button.active { background: var(--accent); color: #fff; }
 
 /* matrix */
 table.matrix { width: 100%; border-collapse: collapse; background: var(--panel);
-  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  border: 1px solid var(--line); overflow: hidden; }
 table.matrix th, table.matrix td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; }
 table.matrix thead th { font-size: 12px; color: var(--muted); font-weight: 600; position: sticky; top: 0;
   background: var(--panel); }
@@ -78,22 +78,22 @@ td.cell.sel { outline: 2px solid var(--accent); outline-offset: -2px; }
 .none { color: var(--none); background: var(--none-bg); }
 
 /* badges */
-.badge { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 11px;
+.badge { display: inline-block; padding: 1px 7px; font-size: 11px;
   font-weight: 700; letter-spacing: .02em; }
 .badge.pass { background: var(--pass-bg); color: var(--pass); }
 .badge.fail { background: var(--fail-bg); color: var(--fail); }
 .badge.none { background: var(--none-bg); color: var(--none); }
-.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; }
+.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); padding: 0 6px; }
 
 /* detail panel */
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+.panel { background: var(--panel); border: 1px solid var(--line);
   padding: 16px 18px; margin-top: 16px; }
 .panel h2 { font-size: 16px; margin: 0 0 4px; }
 .panel .sub { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
-.prompt { background: var(--code-bg); border-radius: 8px; padding: 10px 12px; margin: 8px 0 14px; }
+.prompt { background: var(--code-bg); padding: 10px 12px; margin: 8px 0 14px; }
 .reptabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
 .reptabs button { font: inherit; border: 1px solid var(--line); background: var(--panel);
-  color: var(--muted); border-radius: 7px; padding: 4px 12px; cursor: pointer; }
+  color: var(--muted); padding: 4px 12px; cursor: pointer; }
 .reptabs button.active { border-color: var(--accent); color: var(--ink); }
 .verdict { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 6px 0 12px; }
 .verdict .err { color: var(--fail); font-family: var(--mono); font-size: 12px; }
@@ -107,9 +107,9 @@ table.checks td.output { width: 40%; color: var(--muted); font-size: 12px; font-
   white-space: pre-wrap; word-break: break-word; }
 /* elevated check "command" (behavior / substring / …) + semantic/deterministic chips */
 .checktype { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 13px;
-  color: var(--ink); background: var(--chip-bg); border-radius: 6px; padding: 1px 8px; margin-right: 8px; }
+  color: var(--ink); background: var(--chip-bg); padding: 1px 8px; margin-right: 8px; }
 .chip-fam { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
-  font-weight: 700; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); }
+  font-weight: 700; padding: 1px 8px; border: 1px solid var(--line); }
 .chip-fam.deterministic { color: var(--accent); border-color: var(--accent); }
 .chip-fam.semantic { color: var(--partial); border-color: var(--partial); }
 table.checks.answerkey td { vertical-align: middle; }
@@ -125,19 +125,19 @@ table.checks.answerkey td.fam { width: 1%; white-space: nowrap; }
 .docchips { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* trace */
-details.step { border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; background: var(--panel); }
+details.step { border: 1px solid var(--line); margin: 6px 0; background: var(--panel); }
 details.step.err { border-color: var(--fail); }
 details.step > summary { cursor: pointer; padding: 6px 10px; font-size: 13px; display: flex;
   gap: 8px; align-items: center; }
 details.step > summary .n { color: var(--muted); font-variant-numeric: tabular-nums; }
 details.step > summary .teaser { font-family: var(--mono); font-size: 12px; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.codeblock { background: var(--code-bg); border-radius: 6px; padding: 10px 12px; margin: 8px 10px;
+.codeblock { background: var(--code-bg); padding: 10px 12px; margin: 8px 10px;
   overflow: auto; font-size: 12.5px; max-height: 460px; }
 .codeblock code { white-space: pre; }
 .out { margin: 0 10px 8px; }
 .out summary { color: var(--muted); font-size: 12px; cursor: pointer; }
-.out pre { background: var(--code-bg); border-radius: 6px; padding: 8px 10px; margin: 6px 0 0;
+.out pre { background: var(--code-bg); padding: 8px 10px; margin: 6px 0 0;
   overflow: auto; font-size: 12px; max-height: 360px; white-space: pre-wrap; word-break: break-word; }
 .out pre.stderr { border-left: 3px solid var(--partial); }
 .out pre.error { border-left: 3px solid var(--fail); color: var(--fail); }
@@ -147,30 +147,30 @@ details.step > summary .teaser { font-family: var(--mono); font-size: 12px; colo
 details.step.resource { border-left: 3px solid var(--accent); }
 details.step.resource > summary .teaser { color: var(--accent); }
 details.step.resource > a.chip { display: inline-block; margin: 8px 10px 0; }
-pre.resource { background: var(--code-bg); border-radius: 6px; padding: 10px 12px; margin: 8px 10px;
+pre.resource { background: var(--code-bg); padding: 10px 12px; margin: 8px 10px;
   overflow: auto; font-size: 12px; max-height: 360px; white-space: pre-wrap; word-break: break-word; }
 
 /* skills + tests explorer (split) */
 .split { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
 @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
-.tree { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+.tree { background: var(--panel); border: 1px solid var(--line); padding: 10px;
   position: sticky; top: 10px; max-height: 88vh; overflow: auto; }
 .tree .svcpick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 .tree .svcpick button { font: inherit; font-size: 12px; border: 1px solid var(--line);
-  background: var(--panel); color: var(--muted); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  background: var(--panel); color: var(--muted); padding: 3px 8px; cursor: pointer; }
 .tree .svcpick button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tree .grp { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 8px 0 2px; }
 .tree a.file { display: flex; justify-content: space-between; gap: 8px; padding: 3px 6px;
-  border-radius: 6px; font-size: 13px; }
+ font-size: 13px; }
 .tree a.file:hover { background: var(--chip-bg); text-decoration: none; }
 .tree a.file.active { background: var(--accent); color: #fff; }
 .tree a.file.pinned { font-weight: 700; }
 .tree a.file .reach { font-size: 11px; color: var(--muted); }
 .tree a.file.active .reach { color: #fff; }
 .tree a.file.cold .reach { color: var(--fail); }
-.doc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 26px 26px; }
+.doc { background: var(--panel); border: 1px solid var(--line); padding: 6px 26px 26px; }
 .doc h1, .doc h2, .doc h3 { line-height: 1.3; }
-.doc pre, .doc .codeblock { background: var(--code-bg); border-radius: 6px; padding: 10px 12px;
+.doc pre, .doc .codeblock { background: var(--code-bg); padding: 10px 12px;
   overflow: auto; font-size: 12.5px; }
 .doc table { border-collapse: collapse; }
 .doc table td, .doc table th { border: 1px solid var(--line); padding: 4px 8px; }
@@ -180,7 +180,7 @@ pre.resource { background: var(--code-bg); border-radius: 6px; padding: 10px 12p
 .doc table.frontmatter th { text-align: left; color: var(--muted); font-weight: 600;
   white-space: nowrap; vertical-align: top; width: 1%; }
 .readonly { float: right; color: var(--muted); font-size: 11px; border: 1px solid var(--line);
-  border-radius: 6px; padding: 1px 8px; margin-top: 6px; }
+ padding: 1px 8px; margin-top: 6px; }
 
 /* tests viewer — collapsible skill > category > test tree */
 .testlist .treegrp > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -192,10 +192,10 @@ pre.resource { background: var(--code-bg); border-radius: 6px; padding: 10px 12p
 .testlist .treegrp.skill > summary { padding: 6px 4px; margin-top: 6px; font-weight: 700; font-size: 13px;
   color: var(--ink); border-bottom: 1px solid var(--line); }
 .testlist .treegrp.skill > summary .code { font-size: 10px; text-transform: uppercase; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-weight: 600; }
+  border: 1px solid var(--line); padding: 0 4px; font-weight: 600; }
 .testlist .treegrp.cat > summary { padding: 4px 4px 4px 14px; font-size: 11px; text-transform: uppercase;
   letter-spacing: .04em; color: var(--muted); }
-.testlist a { display: block; padding: 5px 8px 5px 26px; border-radius: 6px; font-size: 13px; }
+.testlist a { display: block; padding: 5px 8px 5px 26px; font-size: 13px; }
 .testlist a:hover { background: var(--chip-bg); text-decoration: none; }
 .testlist a.active { background: var(--accent); color: #fff; }
 .muted { color: var(--muted); }
