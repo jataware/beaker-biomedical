@@ -168,14 +168,16 @@
         body.push(h("tr", { class: "group" }, h("td", { colspan: models.length + 1 }, gname)));
       }
       var cells = models.map(function (m) {
-        var c = cellOf(t.ref, m), key = t.ref + "|" + m;
+        var c = cellOf(t.ref, m), key = t.ref + "|" + m, short = m.split("/").pop();
         return h("td", { class: "cell " + cellClass(c) + (key === selKey ? " sel" : ""),
-          title: c ? "click to show traces — " + t.ref + " · " + m : t.ref + " · " + m + " (no run)",
+          title: c ? "view results — " + short : short + " (no run)",
           onClick: c ? function () { location.hash = hResults(c.run_uids[0]); } : null }, cellLabel(c));
       });
       body.push(h("tr", {}, h("td", { class: "test" },
-        h("div", { class: "leaf" }, t.leaf),
-        h("div", { class: "ttl" }, t.title)), cells));
+        h("a", { class: "testlink", href: hTests(t.ref),
+          title: "view test details and answer key" },
+          h("div", { class: "leaf" }, t.leaf),
+          h("div", { class: "ttl" }, t.title))), cells));
     });
 
     var table = rows.length
@@ -192,7 +194,9 @@
     var mark = c.passed === true ? "PASS" : c.passed === false ? "FAIL" : "—";
     return h("tr", {},
       h("td", {}, h("span", { class: "badge " + st }, mark)),
-      h("td", {}, h("div", {}, h("b", {}, c.type)), h("span", { class: "tag" }, c.family || c.method || "")),
+      h("td", {}, h("span", { class: "checktype" }, c.type),
+        c.family ? h("span", { class: "chip-fam " + c.family }, c.family)
+                 : h("span", { class: "tag" }, c.method || "")),
       h("td", { class: "desired" }, c.spec || ""),
       h("td", { class: "output" }, c.detail || ""));
   }
@@ -347,18 +351,43 @@
       return ((svcOrder[a.service] == null ? 99 : svcOrder[a.service]) - (svcOrder[b.service] == null ? 99 : svcOrder[b.service])) ||
         a.service.localeCompare(b.service) || a.category.localeCompare(b.category) || a.leaf.localeCompare(b.leaf);
     });
-    var listKids = [], cur = null;
+    function skillLabel(svc) { var s = skillByService[svc]; return (s && s.name) ? s.name : svc.toUpperCase(); }
+
+    // group the whole corpus into a skill > category > test tree (collapsible)
+    var bySvc = {}, svcSeq = [];
     sorted.forEach(function (x) {
-      var g = x.service + " · " + x.category;
-      if (g !== cur) { cur = g; listKids.push(h("div", { class: "grp" }, g)); }
-      listKids.push(h("a", { class: x.ref === ref ? "active" : "", href: hTests(x.ref) }, x.leaf));
+      if (!bySvc[x.service]) { bySvc[x.service] = { cats: {}, seq: [], n: 0 }; svcSeq.push(x.service); }
+      var b = bySvc[x.service];
+      if (!b.cats[x.category]) { b.cats[x.category] = []; b.seq.push(x.category); }
+      b.cats[x.category].push(x); b.n++;
+    });
+    var listKids = svcSeq.map(function (svc) {
+      var b = bySvc[svc];
+      var svcActive = b.seq.some(function (cat) { return b.cats[cat].some(function (x) { return x.ref === ref; }); });
+      var catEls = b.seq.map(function (cat) {
+        var tests = b.cats[cat];
+        var catActive = tests.some(function (x) { return x.ref === ref; });
+        return h("details", { class: "treegrp cat", open: catActive ? "" : null },
+          h("summary", {}, h("span", { class: "nm" }, cat), h("span", { class: "count" }, String(tests.length))),
+          tests.map(function (x) {
+            return h("a", { class: x.ref === ref ? "active" : "", href: hTests(x.ref) }, x.leaf);
+          }));
+      });
+      return h("details", { class: "treegrp skill", open: svcActive ? "" : null },
+        h("summary", {},
+          h("span", { class: "nm" }, skillLabel(svc)),
+          h("span", { class: "code" }, svc),
+          h("span", { class: "count" }, String(b.n))),
+        catEls);
     });
     var list = h("div", { class: "tree testlist" }, listKids);
 
-    var checks = h("table", { class: "checks" }, t.checks.map(function (c) {
-      return h("tr", {}, h("td", {}, h("span", { class: "tag" }, c.family)),
-        h("td", {}, h("b", {}, c.type), " " + c.spec));
-    }));
+    var checks = h("table", { class: "checks answerkey" }, h("tbody", {}, t.checks.map(function (c) {
+      return h("tr", {},
+        h("td", { class: "fam" }, h("span", { class: "chip-fam " + c.family }, c.family)),
+        h("td", {}, h("span", { class: "checktype" }, c.type),
+          h("span", { class: "spec" }, c.spec || "")));
+    })));
     var refRuns = DATA.runs.filter(function (r) { return r.ref === ref; });
     var runsBlock = refRuns.length ? h("div", { class: "docchips" }, refRuns.map(function (r) {
       return h("a", { class: "chip", href: hResults(r.run_uid) },
@@ -369,7 +398,8 @@
     var doc = h("div", { class: "doc" },
       h("span", { class: "readonly" }, "read-only"),
       h("h2", {}, t.title), h("div", { class: "sub" }, t.ref),
-      h("div", { class: "section-h" }, "Prompt"), h("div", { html: t.prompt_html }),
+      h("div", { class: "section-h" }, "Prompt (shown to the agent)"),
+      h("div", { class: "test-prompt", html: t.prompt_html }),
       t.rationale_html ? h("div", { class: "section-h" }, "Rationale (not shown to the agent)") : null,
       t.rationale_html ? h("div", { html: t.rationale_html }) : null,
       h("div", { class: "section-h" }, "Checks (eval.yaml)"), checks,

@@ -57,9 +57,13 @@ table.matrix { width: 100%; border-collapse: collapse; background: var(--panel);
 table.matrix th, table.matrix td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; }
 table.matrix thead th { font-size: 12px; color: var(--muted); font-weight: 600; position: sticky; top: 0;
   background: var(--panel); }
-table.matrix td.test { width: 55%; }
-table.matrix td.test .leaf { font-weight: 600; }
-table.matrix td.test .ttl { color: var(--muted); font-size: 12px; }
+table.matrix td.test { width: 55%; padding: 0; }
+table.matrix td.test a.testlink { display: block; padding: 7px 10px; color: inherit; }
+table.matrix td.test a.testlink:hover { background: var(--chip-bg); text-decoration: none;
+  box-shadow: inset 3px 0 0 var(--accent); }
+table.matrix td.test a.testlink .leaf { font-weight: 600; }
+table.matrix td.test a.testlink:hover .leaf { color: var(--accent); }
+table.matrix td.test a.testlink .ttl { color: var(--muted); font-size: 12px; }
 tr.group td { background: var(--chip-bg); color: var(--muted); font-weight: 600;
   font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 td.cell { text-align: center; cursor: pointer; font-variant-numeric: tabular-nums;
@@ -101,6 +105,21 @@ table.checks thead th { text-align: left; font-size: 11px; text-transform: upper
 table.checks td.desired { width: 36%; }
 table.checks td.output { width: 40%; color: var(--muted); font-size: 12px; font-family: var(--mono);
   white-space: pre-wrap; word-break: break-word; }
+/* elevated check "command" (behavior / substring / …) + semantic/deterministic chips */
+.checktype { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 13px;
+  color: var(--ink); background: var(--chip-bg); border-radius: 6px; padding: 1px 8px; margin-right: 8px; }
+.chip-fam { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+  font-weight: 700; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); }
+.chip-fam.deterministic { color: var(--accent); border-color: var(--accent); }
+.chip-fam.semantic { color: var(--partial); border-color: var(--partial); }
+table.checks.answerkey td { vertical-align: middle; }
+table.checks.answerkey td.fam { width: 1%; white-space: nowrap; }
+.answerkey .spec { color: var(--muted); font-size: 12.5px; }
+/* the prompt is the headline of a test — highest visible weight */
+.test-prompt { font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--code-bg);
+  border-left: 3px solid var(--accent); padding: 12px 16px; margin: 6px 0 18px; }
+.test-prompt p { margin: 0 0 8px; }
+.test-prompt p:last-child { margin-bottom: 0; }
 .section-h { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
   margin: 16px 0 6px; }
 .docchips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -163,7 +182,20 @@ pre.resource { background: var(--code-bg); border-radius: 6px; padding: 10px 12p
 .readonly { float: right; color: var(--muted); font-size: 11px; border: 1px solid var(--line);
   border-radius: 6px; padding: 1px 8px; margin-top: 6px; }
 
-.testlist a { display: block; padding: 5px 8px; border-radius: 6px; font-size: 13px; }
+/* tests viewer — collapsible skill > category > test tree */
+.testlist .treegrp > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+.testlist .treegrp > summary::-webkit-details-marker { display: none; }
+.testlist .treegrp > summary::before { content: "▸"; color: var(--muted); font-size: 10px; width: 8px; }
+.testlist .treegrp[open] > summary::before { content: "▾"; }
+.testlist .treegrp .nm { flex: 1; }
+.testlist .treegrp .count { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.testlist .treegrp.skill > summary { padding: 6px 4px; margin-top: 6px; font-weight: 700; font-size: 13px;
+  color: var(--ink); border-bottom: 1px solid var(--line); }
+.testlist .treegrp.skill > summary .code { font-size: 10px; text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-weight: 600; }
+.testlist .treegrp.cat > summary { padding: 4px 4px 4px 14px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted); }
+.testlist a { display: block; padding: 5px 8px 5px 26px; border-radius: 6px; font-size: 13px; }
 .testlist a:hover { background: var(--chip-bg); text-decoration: none; }
 .testlist a.active { background: var(--accent); color: #fff; }
 .muted { color: var(--muted); }
