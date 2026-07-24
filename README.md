@@ -5,11 +5,6 @@ NCI **Cancer Research Data Commons (CRDC)** data fabric. Beaker is an AI-enabled
 code-running AI assistant, and equipped with a set of **Agent Skills**, one per CRDC repository,
 that teach the agent how each commons' API works. It also provides a top-level skill for the [Cancer Data Aggregator (CDA)](https://cda.readthedocs.io/) API and Python Library.
 
-> Note: This is a preliminary implementation for the Cancer Genomics Cloud (CGC) developer
-> team to evaluate the *approach*: skills-driven agentic access to CRDC. The skills are very much a work in progress
-> and still improving; answer quality and user experience tracks with skill quality and is expected to climb as the skills are
-> refined. See [Expected failure modes](#expected-failure-modes).
-
 ---
 
 ## Table of contents
