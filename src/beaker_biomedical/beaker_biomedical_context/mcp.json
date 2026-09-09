@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "idc": {
+      "name": "idc",
+      "title": "Imaging Data Commons (IDC) MCP",
+      "cached_resources": {
+        "mcp_tool": [
+          "get_idc_version",
+          "get_stats",
+          "list_collections",
+          "get_collection",
+          "list_analysis_results",
+          "list_attributes",
+          "get_attribute_values",
+          "list_tables",
+          "get_table_schema",
+          "list_clinical_tables",
+          "get_clinical_table_schema",
+          "get_clinical_table",
+          "build_cohort",
+          "run_sql",
+          "get_cohort_urls",
+          "get_viewer_url",
+          "get_citations",
+          "get_licenses"
+        ],
+        "mcp_resource": [
+          "guide_resource",
+          "tables_resource"
+        ]
+      },
+      "description": "MCP server with tooling to work with Imaging Data Commons MCP server",
+      "url": "https://api.imaging.datacommons.cancer.gov/mcp",
+      "transport": "http"
+    }
+  }
+}

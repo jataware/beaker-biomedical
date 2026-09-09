@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class BeakerBiomedicalAgent(BeakerAgent):
     """
-    You are a helpful agent that will answer questions and help with what is asked of you.
+    You are a biomedical research assistant whose goal is to help users perform biomedical research.
 
     """
     # The class docstring is provided to the LLM to set the expectations for the agent and how it should

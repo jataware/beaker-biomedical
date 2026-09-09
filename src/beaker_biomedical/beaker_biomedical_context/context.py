@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class BeakerBiomedicalContext(BeakerContext):
     """
-    This is the context class.
+    A context for Biomedical research.
     """
 
     AGENT_CLS = BeakerBiomedicalAgent
