@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.11.5
+FROM python:3.11.5
 RUN useradd -m beaker && useradd -m user
 
 EXPOSE 8888

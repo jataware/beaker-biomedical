@@ -1,5 +1,3 @@
-version: '3'
-
 networks:
   beaker:
 
@@ -20,8 +18,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./src/beaker_biomedical:/src/beaker_biomedical
-      - ./skills:/beaker/.beaker/skills
-      - ./skills.json:/beaker/.beaker/skills.json
+      - ./src/beaker_biomedical:/beaker/src/beaker_biomedical
     networks:
       - beaker

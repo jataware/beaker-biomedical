@@ -53,23 +53,23 @@ URIs), then hands off to the repository-specific skill for deep analysis or down
 
 ### Where the skills live
 
-All skills live in the [`skills/`](skills/) directory and are mounted into the container at
-`/beaker/.beaker/skills`. Each is a self-contained folder; the entry point is its `SKILL.md`.
+All skills live in the [`skills/`](src/beaker_biomedical/beaker_biomedical_context/skills/) directory of the `beaker_biomedical_context`
+package, where Beaker discovers them alongside the context. Each is a self-contained folder; the entry point is its `SKILL.md`.
 
-- **[`skills/cancer-data-aggregator/SKILL.md`](skills/cancer-data-aggregator/SKILL.md)**: CDA, cross-repository metadata search and routing (`cdapython`).
-- **[`skills/genomics-data-commons/SKILL.md`](skills/genomics-data-commons/SKILL.md)**: GDC genomics: cases/files, expression matrices, mutation frequency, survival, BAM slicing, GraphQL.
-- **[`skills/proteomic-data-commons/SKILL.md`](skills/proteomic-data-commons/SKILL.md)**: PDC proteomics: studies, quantitation matrices, spectral counts, signed-URL downloads.
-- **[`skills/general-commons/SKILL.md`](skills/general-commons/SKILL.md)**: GC / CDS: programs, studies, participants, clinical/biospecimen/file metadata (lower-priority fallback).
-- **[`skills/integrated-canine-data-commons/SKILL.md`](skills/integrated-canine-data-commons/SKILL.md)**: ICDC comparative oncology: canine cancer studies, faceted cohort building (breed/diagnosis/…), clinical-trial data, DRS file manifests, GraphQL.
-- **[`skills/clinical-translational-data-commons/SKILL.md`](skills/clinical-translational-data-commons/SKILL.md)**: CTDC clinical/translational trial data: participants with CTEP-coded diagnoses, targeted/non-targeted therapy, surgery, radiotherapy, biospecimens; faceted cohort building, per-study clinical node data, DRS files, GraphQL.
-- **[`skills/population-sciences-data-commons/SKILL.md`](skills/population-sciences-data-commons/SKILL.md)**: PS-DC population-science screening cohorts (NLST, PLCO, PBCS): study metadata, demographics, cancer sites, data-collection scope, faceted study search, study-level DRS files, GraphQL. New prototype — study-level queries only (participant-level endpoints not yet live).
+- **[`skills/cancer-data-aggregator/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/cancer-data-aggregator/SKILL.md)**: CDA, cross-repository metadata search and routing (`cdapython`).
+- **[`skills/genomics-data-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/genomics-data-commons/SKILL.md)**: GDC genomics: cases/files, expression matrices, mutation frequency, survival, BAM slicing, GraphQL.
+- **[`skills/proteomic-data-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/proteomic-data-commons/SKILL.md)**: PDC proteomics: studies, quantitation matrices, spectral counts, signed-URL downloads.
+- **[`skills/general-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/general-commons/SKILL.md)**: GC / CDS: programs, studies, participants, clinical/biospecimen/file metadata (lower-priority fallback).
+- **[`skills/integrated-canine-data-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/integrated-canine-data-commons/SKILL.md)**: ICDC comparative oncology: canine cancer studies, faceted cohort building (breed/diagnosis/…), clinical-trial data, DRS file manifests, GraphQL.
+- **[`skills/clinical-translational-data-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/clinical-translational-data-commons/SKILL.md)**: CTDC clinical/translational trial data: participants with CTEP-coded diagnoses, targeted/non-targeted therapy, surgery, radiotherapy, biospecimens; faceted cohort building, per-study clinical node data, DRS files, GraphQL.
+- **[`skills/population-sciences-data-commons/SKILL.md`](src/beaker_biomedical/beaker_biomedical_context/skills/population-sciences-data-commons/SKILL.md)**: PS-DC population-science screening cohorts (NLST, PLCO, PBCS): study metadata, demographics, cancer sites, data-collection scope, faceted study search, study-level DRS files, GraphQL. New prototype — study-level queries only (participant-level endpoints not yet live).
 
 The **Imaging Data Commons (IDC)** skill is not vendored in this repo. It is referenced by URL in
-[`skills.json`](skills.json) and pulled in at runtime from the upstream
+[`skills.json`](src/beaker_biomedical/beaker_biomedical_context/skills.json) and pulled in at runtime from the upstream
 [`ImagingDataCommons/idc-claude-skill`](https://github.com/ImagingDataCommons/idc-claude-skill)
 repository. 
 
-> **Note**: Externally hosted (e.g. via Github) skills such as the IDC skill can be managed via `skills.json`. Add or remove remote skills by editing `skills.json` (which mounts to the built container at `/beaker/.beaker/skills.json`).
+> **Note**: Externally hosted (e.g. via Github) skills such as the IDC skill can be managed via `skills.json`. Add or remove remote skills by editing [`skills.json`](src/beaker_biomedical/beaker_biomedical_context/skills.json), which sits next to the local `skills/` directory.
 
 ---
 
@@ -129,7 +129,7 @@ commons at their then-current loads) and **drift with each data release** — `n
 right order of magnitude / tolerance, re-baselining against each commons' metrics endpoint when numbers
 shift, while the graded *behaviors* (right endpoint, right filter slot, right interpretation) are stable.
 
-The Imaging Data Commons (IDC) skill is fetched remotely (see [`skills.json`](skills.json)) and is not
+The Imaging Data Commons (IDC) skill is fetched remotely (see [`skills.json`](src/beaker_biomedical/beaker_biomedical_context/skills.json)) and is not
 yet covered here. _To be filled out: per-skill pass rates, the harness/runner used, and regression cadence._
 
 ---
@@ -201,8 +201,8 @@ docker-compose up
 
 3. Open the Beaker notebook at **http://localhost:8888**.
 
-The [`docker-compose.yaml`](docker-compose.yaml) mounts [`skills/`](skills/) and
-[`skills.json`](skills.json) into the container, so you can edit a skill and restart to pick up changes
-without rebuilding the image. The `beaker-biomedical` context loads automatically
+The [`docker-compose.yaml`](docker-compose.yaml) mounts [`src/beaker_biomedical/`](src/beaker_biomedical/)
+(including the skills and `skills.json`) into the container, so you can edit code or a skill and restart
+to pick up changes without rebuilding the image. The `beaker-biomedical` context loads automatically
 (`BEAKER_DEFAULT_CONTEXT=beaker-biomedical`).
 
